@@ -1,0 +1,1836 @@
+{
+  "version": "2026-11-15",
+  "lastChecked": "2026-11-15",
+  "issuers": [
+    {
+      "id": "rbc",
+      "name": "RBC Royal Bank",
+      "sourceUrl": "https://www.rbcroyalbank.com/credit-cards/index.html"
+    },
+    {
+      "id": "td",
+      "name": "TD",
+      "sourceUrl": "https://www.td.com/ca/en/personal-banking/products/credit-cards/browse-all"
+    },
+    {
+      "id": "scotiabank",
+      "name": "Scotiabank",
+      "sourceUrl": "https://www.scotiabank.com/ca/en/personal/credit-cards.html"
+    },
+    {
+      "id": "bmo",
+      "name": "BMO",
+      "sourceUrl": "https://www.bmo.com/main/personal/credit-cards/all-cards/"
+    },
+    {
+      "id": "cibc",
+      "name": "CIBC",
+      "sourceUrl": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards.html"
+    },
+    {
+      "id": "national-bank",
+      "name": "National Bank",
+      "sourceUrl": "https://www.nbc.ca/personal/mastercard-credit-cards-alt.html"
+    },
+    {
+      "id": "desjardins",
+      "name": "Desjardins",
+      "sourceUrl": "https://www.desjardins.com/en/credit-cards.html"
+    },
+    {
+      "id": "amex",
+      "name": "American Express Canada",
+      "sourceUrl": "https://www.americanexpress.com/ca/en/credit-cards/card-types/"
+    },
+    {
+      "id": "tangerine",
+      "name": "Tangerine",
+      "sourceUrl": "https://www.tangerine.ca/en/personal/spend/credit-cards"
+    },
+    {
+      "id": "simplii",
+      "name": "Simplii Financial",
+      "sourceUrl": "https://www.simplii.com/en/credit-cards.html"
+    },
+    {
+      "id": "pc-financial",
+      "name": "PC Financial",
+      "sourceUrl": "https://www.pcfinancial.ca/en/credit-cards/"
+    },
+    {
+      "id": "canadian-tire",
+      "name": "Canadian Tire Bank (Triangle)",
+      "sourceUrl": "https://www.canadiantire.ca/mastercard"
+    },
+    {
+      "id": "rogers",
+      "name": "Rogers Bank",
+      "sourceUrl": "https://www.rogersbank.com/en/"
+    },
+    {
+      "id": "brim",
+      "name": "Brim Financial",
+      "sourceUrl": "https://brimfinancial.com/"
+    },
+    {
+      "id": "neo",
+      "name": "Neo Financial",
+      "sourceUrl": "https://www.neofinancial.com/credit"
+    },
+    {
+      "id": "mbna",
+      "name": "MBNA",
+      "sourceUrl": "https://www.mbna.ca/en/credit-cards/compare-credit-cards"
+    },
+    {
+      "id": "capital-one",
+      "name": "Capital One Canada",
+      "sourceUrl": "https://www.capitalone.ca/credit-cards/compare/"
+    },
+    {
+      "id": "wealthsimple",
+      "name": "Wealthsimple",
+      "sourceUrl": "https://www.wealthsimple.com/en-ca/spend"
+    },
+    {
+      "id": "koho",
+      "name": "KOHO",
+      "sourceUrl": "https://www.koho.ca/prepaid-mastercard/"
+    },
+    {
+      "id": "eq-bank",
+      "name": "EQ Bank",
+      "sourceUrl": "https://www.eqbank.ca/personal-banking/payments/card"
+    },
+    {
+      "id": "home-trust",
+      "name": "Home Trust",
+      "sourceUrl": "https://visa.hometrust.ca/"
+    },
+    {
+      "id": "walmart",
+      "name": "Walmart Rewards (Duo Bank)",
+      "sourceUrl": "https://www.walmartrewards.ca/en/creditcards"
+    },
+    {
+      "id": "atb",
+      "name": "ATB Financial",
+      "sourceUrl": "https://www.atb.com/personal/everyday-banking/credit-cards/"
+    },
+    {
+      "id": "manulife",
+      "name": "Manulife Bank",
+      "sourceUrl": "https://www.manulifebank.ca/personal-banking/credit-cards.html"
+    },
+    {
+      "id": "vancity",
+      "name": "Vancity",
+      "sourceUrl": "https://www.vancity.com/bank/credit-cards/enviro-classic"
+    },
+    {
+      "id": "coast-capital",
+      "name": "Coast Capital",
+      "sourceUrl": "https://www.coastcapitalsavings.com/credit-cards"
+    },
+    {
+      "id": "meridian",
+      "name": "Meridian",
+      "sourceUrl": "https://www.meridiancu.ca/personal/credit-cards"
+    },
+    {
+      "id": "servus",
+      "name": "Servus Credit Union",
+      "sourceUrl": "https://servus.ca/personal/borrow/credit-cards"
+    },
+    {
+      "id": "alterna",
+      "name": "Alterna Savings",
+      "sourceUrl": "https://www.alterna.ca/en/personal/borrowing/credit-cards"
+    }
+  ],
+  "cards": [
+    {
+      "id": "rbc-avion-visa-infinite",
+      "issuerId": "rbc",
+      "name": "RBC Avion Visa Infinite",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-avion-visa-infinite-privilege",
+      "issuerId": "rbc",
+      "name": "RBC Avion Visa Infinite Privilege",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-avion-visa-platinum",
+      "issuerId": "rbc",
+      "name": "RBC Avion Visa Platinum",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-westjet-rbc-world-elite-mastercard",
+      "issuerId": "rbc",
+      "name": "WestJet RBC World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rbc-westjet-rbc-mastercard",
+      "issuerId": "rbc",
+      "name": "WestJet RBC Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rbc-british-airways-visa-infinite",
+      "issuerId": "rbc",
+      "name": "RBC British Airways Visa Infinite",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-ion-visa",
+      "issuerId": "rbc",
+      "name": "RBC ION Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-ion-plus-visa",
+      "issuerId": "rbc",
+      "name": "RBC ION+ Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-moi-rbc-visa",
+      "issuerId": "rbc",
+      "name": "moi RBC Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-more-rewards-rbc-visa",
+      "issuerId": "rbc",
+      "name": "More Rewards RBC Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-more-rewards-rbc-visa-infinite",
+      "issuerId": "rbc",
+      "name": "More Rewards RBC Visa Infinite",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-cash-back-mastercard",
+      "issuerId": "rbc",
+      "name": "RBC Cash Back Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rbc-cash-back-preferred-world-elite-mastercard",
+      "issuerId": "rbc",
+      "name": "RBC Cash Back Preferred World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rbc-visa-classic-low-rate-option",
+      "issuerId": "rbc",
+      "name": "RBC Visa Classic Low Rate Option",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-visa-platinum",
+      "issuerId": "rbc",
+      "name": "RBC Visa Platinum",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-u-s-dollar-visa-gold",
+      "issuerId": "rbc",
+      "name": "RBC U.S. Dollar Visa Gold",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "rbc-client-card",
+      "issuerId": "rbc",
+      "name": "RBC Client Card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "rbc-virtual-visa-debit",
+      "issuerId": "rbc",
+      "name": "RBC Virtual Visa Debit",
+      "kind": "debit",
+      "networks": [
+        "Visa Debit"
+      ]
+    },
+    {
+      "id": "td-cash-back-visa-infinite-card",
+      "issuerId": "td",
+      "name": "TD Cash Back Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-cash-back-visa-card",
+      "issuerId": "td",
+      "name": "TD Cash Back Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-aeroplan-visa-infinite-card",
+      "issuerId": "td",
+      "name": "TD Aeroplan Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-aeroplan-visa-platinum-credit-card",
+      "issuerId": "td",
+      "name": "TD Aeroplan Visa Platinum Credit Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-aeroplan-visa-infinite-privilege-credit-card",
+      "issuerId": "td",
+      "name": "TD Aeroplan Visa Infinite Privilege Credit Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-first-class-travel-visa-infinite-card",
+      "issuerId": "td",
+      "name": "TD First Class Travel Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-platinum-travel-visa-card",
+      "issuerId": "td",
+      "name": "TD Platinum Travel Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-rewards-visa-card",
+      "issuerId": "td",
+      "name": "TD Rewards Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-low-rate-visa-card",
+      "issuerId": "td",
+      "name": "TD Low Rate Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-u-s-dollar-visa-card",
+      "issuerId": "td",
+      "name": "TD U.S. Dollar Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "td-access-card-with-visa-debit",
+      "issuerId": "td",
+      "name": "TD Access Card with Visa Debit",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Visa Debit"
+      ]
+    },
+    {
+      "id": "scotiabank-passport-visa-infinite-plus-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank Passport Visa Infinite + Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-passport-visa-infinite-privilege-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank Passport Visa Infinite Privilege Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-scotia-momentum-visa-infinite-plus-card",
+      "issuerId": "scotiabank",
+      "name": "Scotia Momentum Visa Infinite + Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-scotia-momentum-visa-card",
+      "issuerId": "scotiabank",
+      "name": "Scotia Momentum Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-scotia-momentum-no-fee-visa-card",
+      "issuerId": "scotiabank",
+      "name": "Scotia Momentum No-Fee Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-scotia-momentum-mastercard-credit-card",
+      "issuerId": "scotiabank",
+      "name": "Scotia Momentum Mastercard credit card",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "scotiabank-gold-american-express-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank Gold American Express Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "scotiabank-american-express-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank American Express Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "scotiabank-platinum-american-express-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank Platinum American Express Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "scotiabank-scene-plus-visa-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank Scene+ Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-u-s-dollar-visa-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank U.S. Dollar Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-value-visa-card",
+      "issuerId": "scotiabank",
+      "name": "Scotiabank Value Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "scotiabank-scotiacard-with-visa-debit",
+      "issuerId": "scotiabank",
+      "name": "ScotiaCard with Visa Debit",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Visa Debit"
+      ]
+    },
+    {
+      "id": "bmo-eclipse-rise-visa-card",
+      "issuerId": "bmo",
+      "name": "BMO eclipse rise Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "bmo-eclipse-visa-infinite-card",
+      "issuerId": "bmo",
+      "name": "BMO eclipse Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "bmo-eclipse-visa-infinite-privilege-card",
+      "issuerId": "bmo",
+      "name": "BMO eclipse Visa Infinite Privilege Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "bmo-cashback-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO CashBack Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-cashback-world-elite-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO CashBack World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-ascend-world-elite-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO Ascend World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-viporter-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO VIPorter Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-viporter-world-elite-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO VIPorter World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-blue-rewards-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO Blue Rewards Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-blue-rewards-world-elite-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO Blue Rewards World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-preferred-rate-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO Preferred Rate Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-u-s-dollar-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO U.S. Dollar Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-prepaid-travel-mastercard",
+      "issuerId": "bmo",
+      "name": "BMO Prepaid Travel Mastercard",
+      "kind": "prepaid",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "bmo-debit-card",
+      "issuerId": "bmo",
+      "name": "BMO Debit Card",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Debit Mastercard"
+      ]
+    },
+    {
+      "id": "cibc-aventura-visa-infinite-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aventura Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-aventura-visa-infinite-privilege-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aventura Visa Infinite Privilege Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-aventura-gold-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aventura Gold Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-aventura-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aventura Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-aeroplan-visa-infinite-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aeroplan Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-aeroplan-visa-infinite-privilege-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aeroplan Visa Infinite Privilege Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-aeroplan-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Aeroplan Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-adapta-mastercard",
+      "issuerId": "cibc",
+      "name": "CIBC Adapta Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "cibc-dividend-visa-infinite-card",
+      "issuerId": "cibc",
+      "name": "CIBC Dividend Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-dividend-platinum-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Dividend Platinum Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-dividend-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Dividend Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-costco-mastercard",
+      "issuerId": "cibc",
+      "name": "CIBC Costco Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "cibc-u-s-dollar-aventura-gold-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC U.S. Dollar Aventura Gold Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-select-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Select Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-classic-visa-card",
+      "issuerId": "cibc",
+      "name": "CIBC Classic Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "cibc-advantage-debit-card",
+      "issuerId": "cibc",
+      "name": "CIBC Advantage Debit Card",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Visa Debit"
+      ]
+    },
+    {
+      "id": "national-bank-mycredit-mastercard",
+      "issuerId": "national-bank",
+      "name": "mycredit Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-world-elite-mastercard",
+      "issuerId": "national-bank",
+      "name": "World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-platinum-mastercard",
+      "issuerId": "national-bank",
+      "name": "Platinum Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-allure-mastercard",
+      "issuerId": "national-bank",
+      "name": "Allure Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-syncro-mastercard",
+      "issuerId": "national-bank",
+      "name": "Syncro Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-echo-cashback-mastercard",
+      "issuerId": "national-bank",
+      "name": "ECHO Cashback Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-mc1-mastercard",
+      "issuerId": "national-bank",
+      "name": "MC1 Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-world-mastercard",
+      "issuerId": "national-bank",
+      "name": "World Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "national-bank-debit-card",
+      "issuerId": "national-bank",
+      "name": "National Bank Debit Card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "desjardins-flexi-visa",
+      "issuerId": "desjardins",
+      "name": "Flexi Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "desjardins-cash-back-visa",
+      "issuerId": "desjardins",
+      "name": "Cash Back Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "desjardins-cash-back-mastercard",
+      "issuerId": "desjardins",
+      "name": "Cash Back Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "desjardins-bonus-visa",
+      "issuerId": "desjardins",
+      "name": "Bonus Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "desjardins-cash-back-world-elite-mastercard",
+      "issuerId": "desjardins",
+      "name": "Cash Back World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "desjardins-odyssey-gold-visa",
+      "issuerId": "desjardins",
+      "name": "Odyssey Gold Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "desjardins-odyssey-world-elite-mastercard",
+      "issuerId": "desjardins",
+      "name": "Odyssey World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "desjardins-odyssey-visa-infinite-privilege",
+      "issuerId": "desjardins",
+      "name": "Odyssey Visa Infinite Privilege",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "desjardins-debit-card",
+      "issuerId": "desjardins",
+      "name": "Desjardins Debit Card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "amex-the-platinum-card",
+      "issuerId": "amex",
+      "name": "The Platinum Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-american-express-gold-rewards-card",
+      "issuerId": "amex",
+      "name": "American Express Gold Rewards Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-american-express-cobalt-card",
+      "issuerId": "amex",
+      "name": "American Express Cobalt Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-american-express-green-card",
+      "issuerId": "amex",
+      "name": "American Express Green Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-american-express-aeroplan-card",
+      "issuerId": "amex",
+      "name": "American Express Aeroplan Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-american-express-aeroplan-reserve-card",
+      "issuerId": "amex",
+      "name": "American Express Aeroplan Reserve Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-marriott-bonvoy-american-express-card",
+      "issuerId": "amex",
+      "name": "Marriott Bonvoy American Express Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-simplycash-card-from-american-express",
+      "issuerId": "amex",
+      "name": "SimplyCash Card from American Express",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-simplycash-preferred-card-from-american-express",
+      "issuerId": "amex",
+      "name": "SimplyCash Preferred Card from American Express",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "amex-american-express-essential-credit-card",
+      "issuerId": "amex",
+      "name": "American Express Essential Credit Card",
+      "kind": "credit",
+      "networks": [
+        "American Express"
+      ]
+    },
+    {
+      "id": "tangerine-money-back-credit-card",
+      "issuerId": "tangerine",
+      "name": "Tangerine Money Back Credit Card",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "tangerine-money-back-world-mastercard",
+      "issuerId": "tangerine",
+      "name": "Tangerine Money Back World Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "tangerine-rewards-world-elite-mastercard",
+      "issuerId": "tangerine",
+      "name": "Tangerine Rewards World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "tangerine-client-card-with-visa-debit",
+      "issuerId": "tangerine",
+      "name": "Tangerine Client Card with Visa Debit",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Visa Debit"
+      ]
+    },
+    {
+      "id": "simplii-financial-cash-back-visa-card",
+      "issuerId": "simplii",
+      "name": "Simplii Financial Cash Back Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "simplii-financial-debit-mastercard",
+      "issuerId": "simplii",
+      "name": "Simplii Financial Debit Mastercard",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Debit Mastercard"
+      ]
+    },
+    {
+      "id": "pc-financial-pc-mastercard",
+      "issuerId": "pc-financial",
+      "name": "PC Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "pc-financial-pc-world-mastercard",
+      "issuerId": "pc-financial",
+      "name": "PC World Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "pc-financial-pc-world-elite-mastercard",
+      "issuerId": "pc-financial",
+      "name": "PC World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "pc-financial-pc-insiders-world-elite-mastercard",
+      "issuerId": "pc-financial",
+      "name": "PC Insiders World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "pc-financial-pc-money-account-card",
+      "issuerId": "pc-financial",
+      "name": "PC Money Account card",
+      "kind": "prepaid",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "canadian-tire-triangle-mastercard",
+      "issuerId": "canadian-tire",
+      "name": "Triangle Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "canadian-tire-triangle-world-elite-mastercard",
+      "issuerId": "canadian-tire",
+      "name": "Triangle World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rogers-red-mastercard",
+      "issuerId": "rogers",
+      "name": "Rogers Red Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rogers-red-world-elite-mastercard",
+      "issuerId": "rogers",
+      "name": "Rogers Red World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "rogers-red-world-legend-mastercard",
+      "issuerId": "rogers",
+      "name": "Rogers Red World Legend Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "brim-mastercard",
+      "issuerId": "brim",
+      "name": "Brim Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "brim-world-elite-mastercard",
+      "issuerId": "brim",
+      "name": "Brim World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "brim-air-france-klm-world-elite-mastercard",
+      "issuerId": "brim",
+      "name": "Air France KLM World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "neo-mastercard",
+      "issuerId": "neo",
+      "name": "Neo Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "neo-world-mastercard",
+      "issuerId": "neo",
+      "name": "Neo World Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "neo-world-elite-mastercard",
+      "issuerId": "neo",
+      "name": "Neo World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "neo-cathay-world-elite-mastercard",
+      "issuerId": "neo",
+      "name": "Cathay World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "neo-united-world-elite-mastercard",
+      "issuerId": "neo",
+      "name": "United MileagePlus Neo World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "mbna-true-line-mastercard",
+      "issuerId": "mbna",
+      "name": "MBNA True Line Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "mbna-true-line-gold-mastercard",
+      "issuerId": "mbna",
+      "name": "MBNA True Line Gold Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "mbna-rewards-platinum-plus-mastercard",
+      "issuerId": "mbna",
+      "name": "MBNA Rewards Platinum Plus Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "mbna-rewards-world-elite-mastercard",
+      "issuerId": "mbna",
+      "name": "MBNA Rewards World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "mbna-amazon-ca-rewards-mastercard",
+      "issuerId": "mbna",
+      "name": "Amazon.ca Rewards Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "capital-one-quicksilver-world-elite-mastercard",
+      "issuerId": "capital-one",
+      "name": "Quicksilver World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "capital-one-quicksilver-world-mastercard",
+      "issuerId": "capital-one",
+      "name": "Quicksilver World Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "capital-one-smart-rewards-mastercard",
+      "issuerId": "capital-one",
+      "name": "Smart Rewards Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "capital-one-guaranteed-mastercard",
+      "issuerId": "capital-one",
+      "name": "Guaranteed Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "capital-one-guaranteed-secured-mastercard",
+      "issuerId": "capital-one",
+      "name": "Guaranteed Secured Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "wealthsimple-visa-infinite-plus",
+      "issuerId": "wealthsimple",
+      "name": "Wealthsimple Visa Infinite +",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "wealthsimple-visa-infinite-privilege",
+      "issuerId": "wealthsimple",
+      "name": "Wealthsimple Visa Infinite Privilege",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "wealthsimple-visa-platinum-prepaid-card",
+      "issuerId": "wealthsimple",
+      "name": "Wealthsimple Visa Platinum Prepaid card",
+      "kind": "prepaid",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "koho-mastercard-prepaid-card",
+      "issuerId": "koho",
+      "name": "KOHO Mastercard Prepaid card",
+      "kind": "prepaid",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "eq-bank-card",
+      "issuerId": "eq-bank",
+      "name": "EQ Bank Card",
+      "kind": "prepaid",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "home-trust-preferred-visa",
+      "issuerId": "home-trust",
+      "name": "Home Trust Preferred Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "home-trust-secured-visa",
+      "issuerId": "home-trust",
+      "name": "Home Trust Secured Visa",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "walmart-rewards-mastercard",
+      "issuerId": "walmart",
+      "name": "Walmart Rewards Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-gold-my-rewards-mastercard",
+      "issuerId": "atb",
+      "name": "ATB Gold My Rewards Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-gold-cash-my-rewards-mastercard",
+      "issuerId": "atb",
+      "name": "ATB Gold Cash My Rewards Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-world-elite-mastercard",
+      "issuerId": "atb",
+      "name": "ATB World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-preferred-fixed-rate-mastercard",
+      "issuerId": "atb",
+      "name": "ATB Preferred Fixed-Rate Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-preferred-variable-rate-mastercard",
+      "issuerId": "atb",
+      "name": "ATB Preferred Variable-Rate Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-alberta-mastercard",
+      "issuerId": "atb",
+      "name": "ATB Alberta Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-alberta-mastercard-secured",
+      "issuerId": "atb",
+      "name": "ATB Alberta Mastercard - Secured",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-us-dollar-mastercard",
+      "issuerId": "atb",
+      "name": "ATB US Dollar Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-load-and-go-prepaid-mastercard",
+      "issuerId": "atb",
+      "name": "ATB Load & Go Prepaid Mastercard",
+      "kind": "prepaid",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "atb-debit-card",
+      "issuerId": "atb",
+      "name": "ATB Debit Card",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Visa Debit"
+      ]
+    },
+    {
+      "id": "manulife-bank-visa-infinite",
+      "issuerId": "manulife",
+      "name": "Manulife Bank Visa Infinite",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "manulife-bank-visa-platinum",
+      "issuerId": "manulife",
+      "name": "Manulife Bank Visa Platinum",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "manulife-bank-access-card",
+      "issuerId": "manulife",
+      "name": "Manulife Bank access card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "vancity-enviro-visa-classic",
+      "issuerId": "vancity",
+      "name": "enviro Visa Classic",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "vancity-enviro-visa-gold",
+      "issuerId": "vancity",
+      "name": "enviro Visa Gold",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "vancity-enviro-visa-infinite",
+      "issuerId": "vancity",
+      "name": "enviro Visa Infinite",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "vancity-enviro-visa-infinite-privilege",
+      "issuerId": "vancity",
+      "name": "enviro Visa Infinite Privilege",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "vancity-member-card-debit-card",
+      "issuerId": "vancity",
+      "name": "MEMBER CARD debit card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "coast-capital-cash-back-mastercard",
+      "issuerId": "coast-capital",
+      "name": "Cash Back Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "coast-capital-world-mastercard",
+      "issuerId": "coast-capital",
+      "name": "World Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "coast-capital-cash-back-world-elite-mastercard",
+      "issuerId": "coast-capital",
+      "name": "Cash Back World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "coast-capital-centra-gold-mastercard",
+      "issuerId": "coast-capital",
+      "name": "Centra Gold Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "coast-capital-classic-mastercard",
+      "issuerId": "coast-capital",
+      "name": "Classic Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "coast-capital-us-dollar-mastercard",
+      "issuerId": "coast-capital",
+      "name": "US Dollar Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "coast-capital-savings-debit-card",
+      "issuerId": "coast-capital",
+      "name": "Coast Capital Savings debit card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "meridian-visa-infinite-cash-back-card",
+      "issuerId": "meridian",
+      "name": "Meridian Visa Infinite Cash Back Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "meridian-visa-cash-back-card",
+      "issuerId": "meridian",
+      "name": "Meridian Visa Cash Back Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "meridian-visa-platinum-cash-back-card",
+      "issuerId": "meridian",
+      "name": "Meridian Visa Platinum Cash Back Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "meridian-visa-platinum-travel-rewards-card",
+      "issuerId": "meridian",
+      "name": "Meridian Visa Platinum Travel Rewards Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "meridian-visa-infinite-travel-rewards-card",
+      "issuerId": "meridian",
+      "name": "Meridian Visa Infinite Travel Rewards Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "meridian-visa-us-dollar-card",
+      "issuerId": "meridian",
+      "name": "Meridian Visa US Dollar Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "meridian-debit-card",
+      "issuerId": "meridian",
+      "name": "Meridian Debit Card",
+      "kind": "debit",
+      "networks": [
+        "Interac"
+      ]
+    },
+    {
+      "id": "servus-no-fee-mastercard",
+      "issuerId": "servus",
+      "name": "Servus No Fee Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "servus-low-rate-mastercard",
+      "issuerId": "servus",
+      "name": "Servus Low Rate Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "servus-gold-mastercard",
+      "issuerId": "servus",
+      "name": "Servus Gold Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "servus-world-elite-mastercard",
+      "issuerId": "servus",
+      "name": "Servus World Elite Mastercard",
+      "kind": "credit",
+      "networks": [
+        "Mastercard"
+      ]
+    },
+    {
+      "id": "servus-member-card",
+      "issuerId": "servus",
+      "name": "Servus Member Card",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Debit Mastercard"
+      ]
+    },
+    {
+      "id": "alterna-cash-back-visa-infinite",
+      "issuerId": "alterna",
+      "name": "Cash Back Visa Infinite",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "alterna-cash-back-visa-card",
+      "issuerId": "alterna",
+      "name": "Cash Back Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "alterna-visa-classic-card",
+      "issuerId": "alterna",
+      "name": "Visa Classic Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "alterna-centra-visa-gold-card",
+      "issuerId": "alterna",
+      "name": "Centra Visa Gold Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "alterna-visa-infinite-card",
+      "issuerId": "alterna",
+      "name": "Visa Infinite Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "alterna-us-dollar-visa-card",
+      "issuerId": "alterna",
+      "name": "US Dollar Visa Card",
+      "kind": "credit",
+      "networks": [
+        "Visa"
+      ]
+    },
+    {
+      "id": "alterna-visa-debit-card",
+      "issuerId": "alterna",
+      "name": "Alterna Visa Debit card",
+      "kind": "debit",
+      "networks": [
+        "Interac",
+        "Visa Debit"
+      ]
+    }
+  ]
+}

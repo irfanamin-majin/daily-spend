@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embed harness</title>
+<link rel="icon" href="data:,">
+<style>html,body{margin:0;height:100%}iframe{display:block;border:0;width:100%;height:100%}</style>
+</head>
+<body>
+<!-- Mimics the artifact viewer: scripts, same-origin storage and forms only.
+     No allow-modals, allow-downloads or allow-popups. -->
+<iframe id="app-frame" src="../"
+  sandbox="allow-scripts allow-same-origin allow-forms"
+  allow="clipboard-write"></iframe>
+</body>
+</html>
