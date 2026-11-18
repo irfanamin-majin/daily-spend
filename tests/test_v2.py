@@ -26,7 +26,7 @@ FAILED = "Couldn't get your location. Try again in a moment."
 CALGARY = {"latitude": 51.0447123, "longitude": -114.0718832, "accuracy": 25}
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 MAPS = "https://www.google.com/maps/search/?api=1&query=51.04471,-114.07188"
-CACHE = "ds-0.2.0"
+CACHE = "ds-0.2.1"
 # A location service the test controls: each request waits until the test answers it.
 STUB_GEO = """
   window.__geo = [];
@@ -108,14 +108,12 @@ def test_01_subpath_same_origin_only(make_app):
     wait_cached(app.page)
     # walk through the app, including the card list and a save
     assert app.ui.locator("#ob-privacy").inner_text() == PRIVACY
-    app.ui.locator("#ob-next").click()
-    app.ui.locator("#ob-cards .check-row").first.wait_for()
     app.ui.locator("#ob-skip").click()
     app.add("12.34", "Groceries")
     for tab in ["history", "summary", "profile"]:
         app.tab(tab)
     app.ui.locator("#btn-add-card").click()
-    app.ui.locator("#ac-results .row").first.wait_for()
+    app.ui.locator("#ac-list .row").first.wait_for()
     app.page.wait_for_timeout(300)
     prefix = app.base_url + "/"
     outside = [u for u in app.requests if not u.startswith(prefix) and not u.startswith("data:")]
@@ -155,8 +153,10 @@ def test_02_works_offline_after_one_visit(make_app):
     # the card list is available offline too
     app.tab("profile")
     app.ui.locator("#btn-add-card").click()
+    app.ui.locator("#ac-list .row").first.wait_for()
     app.ui.locator("#ac-search").fill("cobalt")
-    assert app.ui.locator("#ac-results .row-title").all_inner_texts() == ["American Express Cobalt Card"]
+    found = app.ui.locator("#ac-list [data-cat-id] .row-title").all_inner_texts()
+    assert found and all("Cobalt" in name for name in found)
     app.page.keyboard.press("Escape")
     # a second offline reload still opens, with the data
     app.reload()
@@ -186,22 +186,22 @@ def test_03_update_ready_banner(browser, tmp_path):
             wait_cached(app.page)
             assert app.ui.locator("#banner-update").count() == 0
             app.add("9", "Groceries")
-            # publish version 0.2.1
+            # publish the next version
             sw = (site / "sw.js").read_text()
-            assert "const VERSION = '0.2.0';" in sw
-            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.0';", "const VERSION = '0.2.1';"))
+            assert "const VERSION = '0.2.1';" in sw
+            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.1';", "const VERSION = '0.2.2';"))
             app.reload()                                       # the browser checks for a new worker on navigation
             banner = app.ui.locator("#banner-update")
             banner.wait_for()
             assert "Update ready" in banner.inner_text() and banner.locator("button").inner_text() == "Reload"
             # until Reload is pressed the old version keeps serving and both caches exist
-            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.0", "ds-0.2.1"]
+            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.1", "ds-0.2.2"]
             with app.page.expect_navigation():
                 banner.locator("button").click()
             app.ready()
-            wait_cached(app.page, cache="ds-0.2.1")
+            wait_cached(app.page, cache="ds-0.2.2")
             wait_until(lambda: len(app.page.evaluate("caches.keys()")) == 1)
-            assert app.page.evaluate("caches.keys()") == ["ds-0.2.1"]                 # old cache deleted on activate
+            assert app.page.evaluate("caches.keys()") == ["ds-0.2.2"]                 # old cache deleted on activate
             assert app.ui.locator("#banner-update").count() == 0
             assert len(app.expenses()) == 1                                            # data untouched
             assert app.console_errors == []
@@ -245,7 +245,7 @@ def test_04_manifest_and_icons():
     for a in assets:
         assert os.path.isfile(os.path.join(ROOT, "index.html" if a == "./" else a)), a
     assert all(os.path.join("icons", os.path.basename(i["src"])) in [a.replace("/", os.sep) for a in assets] for i in icons)
-    assert "const VERSION = '0.2.0';" in sw and "version: '0.2.0'," in source("app.js")
+    assert "const VERSION = '0.2.1';" in sw and "version: '0.2.1'," in source("app.js")
     assert os.path.isfile(os.path.join(ROOT, ".nojekyll")) and os.path.isfile(os.path.join(ROOT, "README.md"))
     cards = json.loads(source("data/cards-ca.json"))
     assert {"version", "lastChecked", "issuers", "cards"} <= set(cards)
@@ -441,29 +441,18 @@ def test_06_cards(app):
     heads = app.ui.locator("#view .section-head").all_inner_texts()
     assert heads == ["My cards", "Location", "Categories", "Backup", "About"]
     assert app.ui.locator('.tab[data-tab="profile"] span').inner_text() == "Profile"
-    assert "No cards yet" in app.ui.locator("#no-cards").inner_text()
+    assert app.ui.locator("#no-cards").inner_text() == "Add the cards you use to see spending by card."
+    assert app.ui.locator("#btn-add-card").inner_text() == "Add a card"
 
-    # the list loads, grouped by issuer; search and filters work
+    # the list loads; institution, then card (the full picker is covered in test_v2_1.py)
     app.ui.locator("#btn-add-card").click()
-    assert app.ui.locator("#ac-note").inner_text() == "Only the card's name is stored. Never enter your full card number."
-    app.ui.locator("#ac-results .row").first.wait_for()
-    assert app.ui.locator("#ac-results .group-head").all_inner_texts() == ["American Express", "Maple Bank", "Prairie Credit Union"]
-    assert app.ui.locator("#ac-results .row").count() == 5                    # the card with an unknown kind is ignored
-    assert app.ui.locator("#ac-kinds .fchip").all_inner_texts() == ["All", "Credit", "Debit", "Prepaid"]
-    app.ui.locator("#ac-search").fill("prairie cash")
-    assert app.ui.locator("#ac-results .row-title").all_inner_texts() == ["Prairie Cash Back Mastercard"]
-    app.ui.locator("#ac-search").fill("MAPLE")                                # issuer name, any case
-    assert app.ui.locator("#ac-results .row").count() == 2
-    app.ui.locator('#ac-kinds [data-kind="debit"]').click()
-    assert app.ui.locator("#ac-results .row-title").all_inner_texts() == ["Maple Everyday Debit"]
-    app.ui.locator("#ac-search").fill("")
-    app.ui.locator('#ac-kinds [data-kind="prepaid"]').click()
-    assert app.ui.locator("#ac-results .row-title").all_inner_texts() == ["Prairie Reloadable Prepaid"]
-    app.ui.locator('#ac-kinds [data-kind="all"]').click()
+    app.ui.locator("#ac-list .row").first.wait_for()
+    assert app.ui.locator("#ac-list [data-issuer]").count() == 4                # the card with an unknown kind is ignored
     app.ui.locator("#ac-search").fill("zzz")
-    assert "No cards match" in app.ui.locator("#ac-results").inner_text()
-    app.ui.locator("#ac-search").fill("cobalt")
-    app.ui.locator('#ac-results .row:has-text("Cobalt")').click()
+    assert "Nothing matches" in app.ui.locator("#ac-list").inner_text()
+    app.ui.locator("#ac-search").fill("cobalt")                                 # search finds a fixture card
+    app.ui.locator('#ac-list [data-cat-id]:has-text("Cobalt")').click()
+    assert app.ui.locator("#cf-note").inner_text() == "Only the card's name is stored. Never enter your full card number."
 
     # confirmation: nickname, last 4 (validated), colour
     assert "American Express Cobalt Card" in app.ui.locator("#cf-summary").inner_text()
@@ -484,7 +473,7 @@ def test_06_cards(app):
     app.ui.locator("#cf-nick").fill("Cobalt")
     app.ui.locator('#cf-colours .swatch:has(input[value="rose"])').click()
     app.ui.locator("#cf-save").click()
-    assert app.toast().inner_text() == "Card added" and app.sheet_hidden()
+    assert app.toast().inner_text() == "Added American Express Cobalt Card" and app.sheet_hidden()
     cobalt = app.cards()[0]
     assert {k: cobalt[k] for k in ["catalogueId", "issuer", "name", "kind", "networks", "nickname", "last4", "colour", "archived"]} == {
         "catalogueId": "amex-cobalt", "issuer": "American Express", "name": "American Express Cobalt Card", "kind": "credit",
@@ -498,8 +487,7 @@ def test_06_cards(app):
 
     # a second card, no nickname
     app.ui.locator("#btn-add-card").click()
-    assert "Added" in app.ui.locator('#ac-results .row:has-text("Cobalt")').inner_text()
-    app.ui.locator('#ac-results .row:has-text("Maple Everyday Debit")').click()
+    app.pick_card("Maple Bank", "Maple Everyday Debit", kind="debit")
     app.ui.locator("#cf-save").click()
     debit = [c for c in app.cards() if c["kind"] == "debit"][0]
     assert debit["colour"] != "rose" and debit["nickname"] == "" and debit["last4"] == ""
@@ -626,7 +614,7 @@ def test_06_cards(app):
     assert [c for c in app.cards() if c["id"] == cobalt["id"]][0]["archived"] is False
     # removing an unused card deletes it
     app.ui.locator("#btn-add-card").click()
-    app.ui.locator('#ac-results .row:has-text("Prairie Reloadable Prepaid")').click()
+    app.pick_card("Prairie Credit Union", "Prairie Reloadable Prepaid", kind="prepaid")
     app.ui.locator("#cf-save").click()
     assert len(app.cards()) == 3
     app.ui.locator('#card-list .card-tile:has-text("Prairie Reloadable Prepaid")').click()
@@ -636,7 +624,7 @@ def test_06_cards(app):
     assert app.toast().inner_text() == "Card removed" and len(app.cards()) == 2
     # nothing that looks like a card number, expiry or security code is ever stored
     raw = json.dumps(app.state())
-    assert not re.search(r"\d{8,}", re.sub(r'"(createdAt|updatedAt|capturedAt|id)": "[^"]*"', "", raw))
+    assert not re.search(r"\d{8,}", re.sub(r'"(createdAt|updatedAt|capturedAt|id|cardId)": "[^"]*"', "", raw))
     assert not re.search(r"expir|cvv|cvc|security", raw, re.I)
     assert app.card_requests == 2                                                  # fetched once per visit; this test reloaded once
     assert app.console_errors == [] and app.dialogs == []
@@ -651,7 +639,7 @@ def test_07_card_list_fails_add_by_hand(make_app):
     status.filter(has_text="couldn't be loaded").wait_for()
     assert status.inner_text() == "The card list couldn't be loaded. You can still add your card yourself."
     manual = app.ui.locator("#ac-manual")
-    assert manual.inner_text() == "Can't find your card? Add it yourself"
+    assert manual.inner_text() == "My bank or card isn't listed"
     manual.click()
     assert app.ui.locator("#cf-note").inner_text() == "Only the card's name is stored. Never enter your full card number."
     app.ui.locator("#cf-save").click()
@@ -1161,40 +1149,22 @@ def test_13_first_run_setup(make_app):
     app = make_app(skip_welcome=False, geolocation=CALGARY)
     title = app.ui.locator("#sheet-title")
     assert title.inner_text() == "Track spending in seconds"
-    assert app.ui.locator("#ob-step").inner_text() == "Step 1 of 3"
+    assert app.ui.locator("#ob-step").inner_text() == "Step 1 of 2"
     assert app.ui.locator("#ob-privacy").inner_text() == PRIVACY
     assert app.state() is None or app.state()["settings"]["onboarded"] is False
     app.ui.locator("#ob-next").click()
 
-    # step 2: pick cards, with search; optional
-    assert title.inner_text() == "Pick your cards" and app.ui.locator("#ob-step").inner_text() == "Step 2 of 3"
-    app.ui.locator("#ob-cards .check-row").first.wait_for()
-    assert app.ui.locator("#ob-cards .check-row").count() == 5
-    assert "Only the card's name is stored." in app.ui.locator(".sheet .help").inner_text()
-    app.ui.locator("#ob-search").fill("maple")
-    assert app.ui.locator("#ob-cards .row-title").all_inner_texts() == ["Maple Everyday Debit", "Maple Rewards Visa"]
-    app.ui.locator('#ob-cards .check-row:has-text("Maple Rewards Visa")').click()
-    app.ui.locator("#ob-search").fill("")
-    assert app.ui.locator('#ob-cards .check-row:has-text("Maple Rewards Visa") input').is_checked()    # kept across searches
-    app.ui.locator('#ob-cards .check-row:has-text("Cobalt")').click()
-    app.ui.locator('#ob-cards .check-row:has-text("Prairie Reloadable")').click()
-    app.ui.locator('#ob-cards .check-row:has-text("Prairie Reloadable")').click()                      # changed my mind
-    app.ui.locator("#ob-next").click()
-    assert sorted(c["catalogueId"] for c in app.cards()) == ["amex-cobalt", "maple-rewards-visa"]
-    assert len({c["colour"] for c in app.cards()}) == 2
-
-    # step 3: automatic location, off by default; turning it on asks for permission
-    assert title.inner_text() == "Add location to expenses?" and app.ui.locator("#ob-step").inner_text() == "Step 3 of 3"
+    # step 2 (v2.1: the card step is gone): automatic location, off by default; turning it on asks for permission
+    assert title.inner_text() == "Add location to expenses?" and app.ui.locator("#ob-step").inner_text() == "Step 2 of 2"
     toggle = app.ui.locator("#ob-auto")
-    assert not toggle.is_checked() and app.state()["settings"]["autoLocation"] is False
+    assert not toggle.is_checked() and (app.state() is None or app.state()["settings"]["autoLocation"] is False)
     toggle.check()
     assert app.state()["settings"]["autoLocation"] is True
     toggle.uncheck()
     assert app.state()["settings"]["autoLocation"] is False
     app.ui.locator("#ob-done").click()
     assert app.sheet_hidden() and app.ui.locator('.tab[data-tab="add"]').get_attribute("aria-current") == "page"
-    assert app.state()["settings"]["onboarded"] is True
-    assert "Other credit card" in app.ui.locator("#details-row").inner_text()
+    assert app.state()["settings"]["onboarded"] is True and app.cards() == []
 
     # never again...
     app.page.reload()
@@ -1208,16 +1178,12 @@ def test_13_first_run_setup(make_app):
     again.click()
     assert title.inner_text() == "Track spending in seconds"
     app.ui.locator("#ob-next").click()
-    owned = app.ui.locator('#ob-cards .check-row:has-text("Cobalt") input')
-    assert owned.is_checked() and owned.is_disabled()                              # already added: cannot be added twice
-    app.ui.locator("#ob-next").click()
-    assert len(app.cards()) == 2
     app.ui.locator("#ob-skip").click()
     assert app.sheet_hidden()
     assert app.console_errors == [] and app.dialogs == []
 
-    # it can be skipped at any step, and every way of closing it counts
-    for step, closer in [(1, "skip"), (2, "skip"), (3, "skip"), (1, "escape"), (1, "backdrop"), (2, "x")]:
+    # it can be skipped at either step, and every way of closing it counts
+    for step, closer in [(1, "skip"), (2, "skip"), (1, "escape"), (1, "backdrop"), (2, "x")]:
         b = make_app(skip_welcome=False)
         for _ in range(step - 1):
             b.ui.locator("#ob-next").click()
@@ -1238,23 +1204,13 @@ def test_13_first_run_setup(make_app):
         assert b.ui.locator("#ob-skip").count() == 0
         b.close()
 
-    # permission refused in step 3: the switch goes back off, with the reason
+    # permission refused: the switch goes back off, with the reason
     c = make_app(skip_welcome=False)
-    c.ui.locator("#ob-next").click()
     c.ui.locator("#ob-next").click()
     c.ui.locator("#ob-auto").check()
     c.ui.locator("#ob-loc-error").filter(has_text="Location is off").wait_for()
     assert c.ui.locator("#ob-loc-error").inner_text() == DENIED
     assert not c.ui.locator("#ob-auto").is_checked() and c.state()["settings"]["autoLocation"] is False
-
-    # the card list cannot be loaded: setup still works
-    d = make_app(skip_welcome=False, cards="fail")
-    d.ui.locator("#ob-next").click()
-    d.ui.locator("#card-list-status").filter(has_text="couldn't be loaded").wait_for()
-    assert d.ui.locator("#card-list-status").inner_text() == "The card list couldn't be loaded. You can add cards later in Profile."
-    d.ui.locator("#ob-next").click()
-    d.ui.locator("#ob-done").click()
-    assert d.state()["settings"]["onboarded"] is True
 
     # not shown when there is already data
     e = make_app(skip_welcome=False, open_page=False)
@@ -1461,13 +1417,10 @@ def test_16_layout(make_app, size, scheme):
         bad = app.page.evaluate(LAYOUT_CHECK)
         assert bad == [], f"{label} at {size} {scheme}: {bad}"
 
-    # first-run setup, all three steps
+    # first-run setup, both steps
     check("welcome 1")
     app.ui.locator("#ob-next").click()
-    app.ui.locator("#ob-cards .check-row").first.wait_for()
     check("welcome 2")
-    app.ui.locator("#ob-next").click()
-    check("welcome 3")
     app.ui.locator("#ob-skip").click()
 
     app.seed(make_state(rows, cards=LONG_CARDS))
@@ -1544,18 +1497,25 @@ def test_16_layout(make_app, size, scheme):
     app.tab("profile")
     check("profile")
     app.ui.locator("#btn-add-card").click()
-    app.ui.locator("#ac-results .row").first.wait_for()
-    check("add card sheet")
-    app.ui.locator("#ac-results .row").first.click()
+    app.ui.locator("#ac-list .row").first.wait_for()
+    check("picker: institutions")
+    app.ui.locator("#ac-search").fill("ma")
+    check("picker: search")
+    app.ui.locator("#ac-search").fill("")
+    app.ui.locator('#ac-list [data-issuer="Maple Bank"]').click()
+    check("picker: types")
+    app.ui.locator('#ac-types [data-kind="credit"]').click()
+    check("picker: cards")
+    app.ui.locator("#ac-cards .row").first.click()
     check("card confirmation")
     app.ui.locator("#cf-last4").fill("1")
     app.ui.locator("#cf-save").scroll_into_view_if_needed()
     app.ui.locator("#cf-save").click()
     check("card confirmation with error")
     app.ui.locator("#cf-cancel").click()
-    app.ui.locator("#ac-manual").click()
+    app.ui.locator("#ac-manual-here").click()
     check("add card by hand")
-    app.page.keyboard.press("Escape")
+    app.ui.locator("[data-sheet-close]").click()
     app.ui.locator('#card-list .card-tile:has-text("A Card With")').click()
     check("edit card")
     app.ui.locator("#cf-remove").scroll_into_view_if_needed()

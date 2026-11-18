@@ -6,7 +6,7 @@
    ===================================================================== */
 const STRINGS = {
   appName: 'Daily Spend',
-  version: '0.2.0',
+  version: '0.2.1',
   versionLabel: (v) => `Version ${v}`,
   privacy: 'Your entries stay on this device. No account, no tracking. Nothing is sent anywhere, except that opening a location in Google Maps shares that location with Google.',
   tabs: { add: 'Add', history: 'History', summary: 'Summary', profile: 'Profile' },
@@ -182,6 +182,7 @@ const STRINGS = {
   otherSlice: 'Other categories',
   sliceLabel: (name, amount, pct) => `${name}, ${amount}, ${pct}%`,
   barLabel: (day, amount) => `${day}, ${amount}`,
+  wholeDollars: (n) => `$${n}`,
   donutLabel: 'Spending by category. Each slice opens its expenses.',
   dailyTitle: 'Day by day',
   dailyLabel: 'Spending by day. Each bar opens that day.',
@@ -189,23 +190,28 @@ const STRINGS = {
   // Cards
   myCards: 'My cards',
   otherWays: 'Other ways',
-  noCards: 'No cards yet. Add the ones you pay with to see spending by card.',
-  addCard: 'Add card',
+  noCards: 'Add the cards you use to see spending by card.',
+  addACard: 'Add a card',
+  addCardSave: 'Add card',
+  confirmCard: 'Confirm card',
+  addOwnCard: 'Add your own card',
   editCard: 'Edit card',
   archived: 'Archived',
   archivedSuffix: ' (archived)',
   restoreCard: 'Restore',
   restoreCardLabel: (name) => `Restore ${name}`,
   cardNumberNote: "Only the card's name is stored. Never enter your full card number.",
-  cardSearchPlaceholder: 'Search by bank or card name',
+  cardSearchPlaceholder: 'Search a bank or card',
   cardSearchLabel: 'Search the card list',
-  cardKindLabel: 'Card type',
-  cardKindFilters: { all: 'All', credit: 'Credit', debit: 'Debit', prepaid: 'Prepaid' },
   cardKinds: { credit: 'Credit', debit: 'Debit', prepaid: 'Prepaid' },
   cardListLoading: 'Loading the card list…',
   cardListFailed: "The card list couldn't be loaded. You can still add your card yourself.",
-  cardNoMatch: 'No cards match. You can add yours yourself.',
-  cardManual: "Can't find your card? Add it yourself",
+  cardNoMatch: 'Nothing matches. You can add your card yourself below.',
+  cardNotListed: "My bank or card isn't listed",
+  cardNotListedAt: (name) => `Card not listed at ${name}`,
+  cardCount: (n) => `${n} ${n === 1 ? 'card' : 'cards'}`,
+  cardKindPlural: { credit: 'Credit cards', debit: 'Debit cards', prepaid: 'Other cards' },
+  cardsGroup: 'Cards',
   cardAdded: 'Added',
   otherIssuer: 'Other',
   cardIssuer: 'Bank or issuer',
@@ -226,7 +232,7 @@ const STRINGS = {
   removeCard: 'Remove card',
   removeCardConfirm: 'Remove this card?',
   archiveCardConfirm: (n) => `Remove this card? It stays on the ${n} ${n === 1 ? 'expense' : 'expenses'} that used it and moves to Archived.`,
-  cardAddedToast: 'Card added',
+  cardAddedNamed: (name) => `Added ${name}`,
   cardSaved: 'Card saved',
   cardArchived: 'Card archived',
   cardRemoved: 'Card removed',
@@ -234,10 +240,7 @@ const STRINGS = {
   // First-run setup
   obStep: (n, of) => `Step ${n} of ${of}`,
   obTitle1: 'Track spending in seconds',
-  obBody1: 'Type the amount, tap a category, and it is saved. Add the merchant, card or location only when you want to.',
-  obTitle2: 'Pick your cards',
-  obBody2: 'Choose the cards you pay with to see spending by card. This is optional.',
-  obCardListFailed: "The card list couldn't be loaded. You can add cards later in Profile.",
+  obBody1: 'Type the amount, tap a category, and it is saved. Everything else is optional.',
   obTitle3: 'Add location to expenses?',
   obBody3: 'Daily Spend can save a pin of where you were with each expense. Turning this on asks for permission.',
   runSetupAgain: 'Run setup again'
@@ -1179,7 +1182,7 @@ const undoToastShowing = () => !!$('.toast-undo', el.toast);
 /* =====================================================================
    11. Sheets (in-page dialogs; no browser dialogs anywhere)
    ===================================================================== */
-const sheet = { node: null, opener: null, dismissible: true, onClose: null };
+const sheet = { node: null, opener: null, dismissible: true, onClose: null, back: null };
 
 // Keyboard avoidance: while a sheet is open, track how much of the layout viewport the
 // on-screen keyboard covers and expose it as --kb-overlap (0px when there is no keyboard).
@@ -1211,30 +1214,37 @@ function watchKeyboard(on) {
   if (on) measureKeyboard(); else setKeyboardOverlap(0);
 }
 
-// options: { dismissible, onClose }. Opening a sheet over another replaces it without
-// running the first sheet's onClose.
+// options: { dismissible, onClose, back, slide, cls, bodyCls, focusTitle }.
+// Opening a sheet over another replaces it in place (no second rise, and without running the
+// first sheet's onClose). `back` adds a back arrow and makes Escape go up a level;
+// `slide` ('fwd' or 'back') slides the new content in.
 function openSheet(title, bodyHtml, options) {
   const opts = options || {};
-  const opener = sheet.node ? sheet.opener : document.activeElement;
+  const replacing = !!sheet.node;
+  const opener = replacing ? sheet.opener : document.activeElement;
+  const back = typeof opts.back === 'function' ? opts.back : null;
+  const still = replacing ? ' still' : '';
   el.sheetRoot.innerHTML =
-    `<div class="backdrop" data-sheet-backdrop></div>
-     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
-       <div class="sheet-head">
-         <h2 id="sheet-title">${esc(title)}</h2>
+    `<div class="backdrop${still}" data-sheet-backdrop></div>
+     <div class="sheet${still}${opts.cls ? ' ' + opts.cls : ''}" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
+       <div class="sheet-head${back ? ' has-back' : ''}">
+         ${back ? `<button type="button" class="icon-btn back-btn" data-sheet-back aria-label="${esc(STRINGS.back)}">‹</button>` : ''}
+         <h2 id="sheet-title" tabindex="-1">${esc(title)}</h2>
          <button type="button" class="icon-btn" data-sheet-close aria-label="${esc(STRINGS.close)}">×</button>
        </div>
-       <div class="sheet-body">${bodyHtml}</div>
+       <div class="sheet-body${opts.bodyCls ? ' ' + opts.bodyCls : ''}${opts.slide ? ' slide-' + opts.slide : ''}">${bodyHtml}</div>
      </div>`;
   el.sheetRoot.hidden = false;
   sheet.node = $('.sheet', el.sheetRoot);
   sheet.opener = opener;
   sheet.dismissible = opts.dismissible !== false;
   sheet.onClose = typeof opts.onClose === 'function' ? opts.onClose : null;
+  sheet.back = back;
   ui.locRefresh = null;
   el.app.inert = true;
   el.app.setAttribute('aria-hidden', 'true');
   watchKeyboard(true);
-  sheet.node.focus({ preventScroll: true });
+  (opts.focusTitle ? $('#sheet-title', sheet.node) : sheet.node).focus({ preventScroll: true });
   return sheet.node;
 }
 
@@ -1245,6 +1255,7 @@ function closeSheet() {
   sheet.node = null;
   sheet.opener = null;
   sheet.onClose = null;
+  sheet.back = null;
   ui.locRefresh = null;
   el.sheetRoot.hidden = true;
   el.sheetRoot.innerHTML = '';
@@ -1258,6 +1269,7 @@ function closeSheet() {
 }
 
 el.sheetRoot.addEventListener('click', (e) => {
+  if (e.target.closest('[data-sheet-back]')) { if (sheet.back) sheet.back(); return; }
   if (e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
   if (e.target.closest('[data-sheet-backdrop]') && sheet.dismissible) closeSheet();
 });
@@ -2206,37 +2218,56 @@ function donutHtml(rows, total) {
   </svg>`;
 }
 
+// The tallest bar the chart draws: 1.2 times the second-highest day, so one big day (rent, say)
+// cannot flatten the rest. With a single day of spending, that day sets the scale.
+function dailyCap(perDay) {
+  const sorted = perDay.filter((c) => c > 0).sort((a, b) => b - a);
+  if (!sorted.length) return 0;
+  return sorted.length === 1 ? sorted[0] : Math.round(sorted[1] * 1.2);
+}
+
 // One bar per day of the month; today is marked. Only days with spending are tappable.
+// A day above the cap is drawn at full height with a break mark and its amount above it.
 function dailyBarsHtml(list) {
   const year = ui.month.y, month = ui.month.m;
   const days = new Date(year, month + 1, 0).getDate();
   const perDay = new Array(days + 1).fill(0);
   list.forEach((e) => { perDay[Number(e.date.slice(8, 10))] += e.amountCents; });
-  const max = Math.max.apply(null, perDay);
-  const W = 320, H = 96, axis = 18, step = W / days, barW = Math.max(3, step * 0.66);
+  const cap = dailyCap(perDay);
+  const W = 320, top = 14, plot = 92, H = top + plot, axis = 18, step = W / days, barW = Math.max(3, step * 0.66);
   const today = todayStr();
   let bars = '';
   for (let d = 1; d <= days; d++) {
     const date = year + '-' + pad2(month + 1) + '-' + pad2(d);
-    const x = (d - 1) * step;
+    const x = (d - 1) * step, bx = x + (step - barW) / 2, mid = x + step / 2;
     const isToday = date === today;
-    if (isToday) bars += `<circle class="today-dot" id="today-dot" cx="${(x + step / 2).toFixed(2)}" cy="${H + 4}" r="2.2"/>`;
+    if (isToday) bars += `<circle class="today-dot" id="today-dot" cx="${mid.toFixed(2)}" cy="${H + 4}" r="2.2"/>`;
     if (!perDay[d]) {
-      bars += `<rect class="bar-empty" x="${(x + (step - barW) / 2).toFixed(2)}" y="${H - 1.5}" width="${barW.toFixed(2)}" height="1.5" rx=".75"/>`;
+      bars += `<rect class="bar-empty" x="${bx.toFixed(2)}" y="${H - 1.5}" width="${barW.toFixed(2)}" height="1.5" rx=".75"/>`;
       continue;
     }
-    const h = Math.max(3, (perDay[d] / max) * (H - 4));
+    const over = perDay[d] > cap;
+    const h = Math.max(3, Math.min(1, perDay[d] / cap) * plot);
     const label = STRINGS.barLabel(dayLabel(date), fmtMoney(perDay[d]));
-    bars += `<g class="daybar${isToday ? ' today' : ''}" tabindex="0" role="button" data-act="filter-day" data-day="${date}" data-cents="${perDay[d]}" aria-label="${esc(label)}">
+    let extra = '';
+    if (over) {
+      // two short diagonal lines across the bar, and the amount in whole dollars above it
+      const y = H - h + 7, l = (bx - 1.5).toFixed(2), r = (bx + barW + 1.5).toFixed(2);
+      const anchor = mid < 26 ? 'start' : mid > W - 26 ? 'end' : 'middle';
+      const tx = anchor === 'start' ? Math.max(0, bx - 1) : anchor === 'end' ? Math.min(W, bx + barW + 1) : mid;
+      extra = `<path class="break" d="M${l} ${(y + 2.2).toFixed(2)}L${r} ${(y - 2.2).toFixed(2)}M${l} ${(y + 6.2).toFixed(2)}L${r} ${(y + 1.8).toFixed(2)}"/>
+        <text class="over-label" x="${tx.toFixed(2)}" y="${top - 4}" text-anchor="${anchor}" aria-hidden="true">${esc(STRINGS.wholeDollars(intFmt.format(Math.round(perDay[d] / 100))))}</text>`;
+    }
+    bars += `<g class="daybar${isToday ? ' today' : ''}${over ? ' capped' : ''}" tabindex="0" role="button" data-act="filter-day" data-day="${date}" data-cents="${perDay[d]}" aria-label="${esc(label)}">
       <title>${esc(label)}</title>
       <rect class="hit" x="${x.toFixed(2)}" y="0" width="${step.toFixed(2)}" height="${H + axis}"/>
-      <rect class="dbar" x="${(x + (step - barW) / 2).toFixed(2)}" y="${(H - h).toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(2.5, barW / 2).toFixed(2)}"/></g>`;
+      <rect class="dbar" x="${bx.toFixed(2)}" y="${(H - h).toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(2.5, barW / 2).toFixed(2)}"/>${extra}</g>`;
   }
   let ticks = '';
   for (let d = 1; d <= days; d += 7) {
     ticks += `<text class="axis" x="${((d - 0.5) * step).toFixed(2)}" y="${H + axis - 2}" text-anchor="middle" aria-hidden="true">${d}</text>`;
   }
-  return `<svg class="daily" id="daily-bars" viewBox="0 0 ${W} ${H + axis}" role="group" aria-label="${esc(STRINGS.dailyLabel)}">${bars}${ticks}</svg>`;
+  return `<svg class="daily" id="daily-bars" viewBox="0 0 ${W} ${H + axis}" data-cap="${cap}" role="group" aria-label="${esc(STRINGS.dailyLabel)}">${bars}${ticks}</svg>`;
 }
 
 function shareRowsHtml(rows, total, act) {
@@ -2355,15 +2386,6 @@ function loadCatalogue() {
   return catalogue.pending;
 }
 
-function searchCatalogue(query, kind) {
-  const words = fold(query).split(/\s+/).filter(Boolean);
-  return catalogue.cards.filter((c) => {
-    if (kind !== 'all' && c.kind !== kind) return false;
-    const hay = fold(c.issuer + ' ' + c.name);
-    return words.every((w) => hay.indexOf(w) !== -1);
-  });
-}
-
 // "Issuer · Credit · Visa · •••• 1234". The card's own name is added when a nickname hides it,
 // and a part that only repeats an earlier one (an issuer that is also the network) is left out.
 function cardMetaLine(card) {
@@ -2372,63 +2394,131 @@ function cardMetaLine(card) {
   return parts.filter((part, i) => parts.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === i).join(STRINGS.sep);
 }
 
-// Results grouped by issuer. mode 'pick': one tap opens the confirmation. mode 'check': multi-select.
-function catalogueListHtml(items, mode, picked) {
-  if (!items.length) return `<p class="list-note" id="card-no-match">${esc(STRINGS.cardNoMatch)}</p>`;
-  const owned = new Set(state.cards.map((c) => c.catalogueId).filter(Boolean));
-  let html = '', issuer = null;
-  items.forEach((c) => {
-    if (c.issuer !== issuer) {
-      issuer = c.issuer;
-      html += `<p class="group-head">${esc(issuer || STRINGS.otherIssuer)}</p>`;
-    }
-    const sub = [STRINGS.cardKinds[c.kind], c.networks.join(' / ')].filter(Boolean).join(STRINGS.sep);
-    const text = `<span class="row-text"><span class="row-title">${esc(c.name)}</span><span class="row-sub">${esc(sub)}</span></span>`;
-    const added = owned.has(c.id) ? `<span class="badge muted">${esc(STRINGS.cardAdded)}</span>` : '';
-    html += mode === 'check'
-      ? `<label class="row check-row" data-cat-id="${esc(c.id)}"><input type="checkbox" value="${esc(c.id)}"${owned.has(c.id) ? ' checked disabled' : picked.has(c.id) ? ' checked' : ''}>${text}${added}</label>`
-      : `<button type="button" class="row" data-cat-id="${esc(c.id)}">${text}${added}${ICONS.chev}</button>`;
+// Institutions in the card list, alphabetical (a leading "The" is ignored), each with its cards.
+function catalogueIssuers() {
+  const byName = new Map();
+  catalogue.cards.forEach((c) => {
+    const name = c.issuer || STRINGS.otherIssuer;
+    if (!byName.has(name)) byName.set(name, { name, cards: [] });
+    byName.get(name).cards.push(c);
   });
-  return html;
+  const key = (name) => fold(name).replace(/^the\s+/, '');
+  return Array.from(byName.values()).sort((a, b) => key(a.name).localeCompare(key(b.name), 'en', { sensitivity: 'base' }));
 }
 
-function catalogueStatusHtml(failedText) {
-  return `<p class="list-note" id="card-list-status" role="status">${esc(catalogue.status === 'failed' ? failedText : STRINGS.cardListLoading)}</p>`;
+// One or two letters for the plain monogram tile (no logos): "RBC Royal Bank" gives RB,
+// "American Express" gives AE, "Tangerine" gives T.
+function monogram(name) {
+  const words = String(name).replace(/^the\s+/i, '').split(/[^0-9A-Za-zÀ-ɏ]+/).filter(Boolean);
+  if (!words.length) return '?';
+  if (/^[A-Z0-9]{2,}$/.test(words[0])) return words[0].slice(0, 2);
+  if (words.length === 1) return words[0].charAt(0).toUpperCase();
+  return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
 }
 
+function catalogueStatusHtml() {
+  return `<p class="list-note" id="card-list-status" role="status">${esc(catalogue.status === 'failed' ? STRINGS.cardListFailed : STRINGS.cardListLoading)}</p>`;
+}
+
+// Add a card: institution, then card type, then card, then the confirmation, all in one sheet.
+// One card at a time. The back arrow and Escape go up one level; closing discards everything,
+// and every opening starts again at the institutions with the search cleared.
 function openAddCardSheet() {
-  let kind = 'all';
-  const kinds = ['all'].concat(CARD_KINDS).map((k) =>
-    `<button type="button" class="fchip" data-kind="${k}" aria-pressed="${k === kind}">${esc(STRINGS.cardKindFilters[k])}</button>`).join('');
-  const node = openSheet(STRINGS.addCard,
-    `<p class="help" id="ac-note">${esc(STRINGS.cardNumberNote)}</p>
-     <input class="input search" type="search" id="ac-search" autocomplete="off" autocapitalize="off" spellcheck="false"
-       placeholder="${esc(STRINGS.cardSearchPlaceholder)}" aria-label="${esc(STRINGS.cardSearchLabel)}">
-     <div class="fchips" id="ac-kinds" role="group" aria-label="${esc(STRINGS.cardKindLabel)}">${kinds}</div>
-     <div class="sheet-list scroll-list" id="ac-results"></div>
-     <button type="button" class="btn block" id="ac-manual">${esc(STRINGS.cardManual)}</button>`);
-  const results = $('#ac-results', node), search = $('#ac-search', node);
-  const show = () => {
-    results.innerHTML = catalogue.status === 'ok'
-      ? catalogueListHtml(searchCatalogue(search.value, kind), 'pick')
-      : catalogueStatusHtml(STRINGS.cardListFailed);
-  };
-  show();
-  loadCatalogue().then(() => { if (sheet.node === node) show(); });
-  search.addEventListener('input', show);
-  $('#ac-kinds', node).addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-kind]');
-    if (!btn) return;
-    kind = btn.dataset.kind;
-    $$('[data-kind]', node).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+  const pick = { query: '' };
+  const level = { cls: 'picker', bodyCls: 'pick-body', focusTitle: true };
+  const kindsAt = (issuer) => CARD_KINDS.filter((k) => issuer.cards.some((c) => c.kind === k));
+  const ofKind = (issuer, kind) => issuer.cards.filter((c) => c.kind === kind);
+  const footer = (id, text) => `<button type="button" class="row plain row-action pick-foot" id="${id}">${esc(text)}</button>`;
+  const addedBadge = (owned, c) => (owned.has(c.id) ? `<span class="badge muted">${esc(STRINGS.cardAdded)}</span>` : '');
+  const ownedIds = () => new Set(state.cards.map((c) => c.catalogueId).filter(Boolean));
+  const byHand = (issuerName, back) => openCardForm({ mode: 'manual', issuer: issuerName, back, slide: 'fwd' });
+  const confirmCard = (item, back) => openCardForm({ mode: 'catalogue', item, back, slide: 'fwd' });
+
+  // Level 1: institutions, with a search that also finds cards by name.
+  function institutions(slide) {
+    const node = openSheet(STRINGS.addACard,
+      `<input class="input search" type="search" id="ac-search" autocomplete="off" autocapitalize="off" spellcheck="false"
+         placeholder="${esc(STRINGS.cardSearchPlaceholder)}" aria-label="${esc(STRINGS.cardSearchLabel)}" value="${esc(pick.query)}">
+       <div class="sheet-list pick-list" id="ac-list"></div>
+       ${footer('ac-manual', STRINGS.cardNotListed)}`, Object.assign({ slide }, level));
+    const list = $('#ac-list', node), search = $('#ac-search', node);
+    const show = () => {
+      if (catalogue.status !== 'ok') { list.innerHTML = catalogueStatusHtml(); return; }
+      const words = fold(pick.query).split(/\s+/).filter(Boolean);
+      const hit = (text) => { const hay = fold(text); return words.every((w) => hay.indexOf(w) !== -1); };
+      const issuers = catalogueIssuers().filter((i) => hit(i.name));
+      let html = issuers.map((i) =>
+        `<button type="button" class="row" data-issuer="${esc(i.name)}"><span class="mono" aria-hidden="true">${esc(monogram(i.name))}</span>
+           <span class="row-text"><span class="row-title">${esc(i.name)}</span><span class="row-sub">${esc(STRINGS.cardCount(i.cards.length))}</span></span>${ICONS.chev}</button>`).join('');
+      if (words.length) {
+        const owned = ownedIds();
+        const cards = catalogue.cards.filter((c) => hit(c.name));
+        if (cards.length) {
+          html += `<p class="group-head" id="ac-cards-head">${esc(STRINGS.cardsGroup)}</p>` + cards.map((c) =>
+            `<button type="button" class="row" data-cat-id="${esc(c.id)}"><span class="row-text"><span class="row-title">${esc(c.name)}</span>
+               <span class="row-sub">${esc([c.issuer, STRINGS.cardKinds[c.kind]].filter(Boolean).join(STRINGS.sep))}</span></span>${addedBadge(owned, c)}${ICONS.chev}</button>`).join('');
+        }
+        if (!issuers.length && !cards.length) html = `<p class="list-note" id="card-no-match">${esc(STRINGS.cardNoMatch)}</p>`;
+      }
+      list.innerHTML = html;
+    };
     show();
-  });
-  results.addEventListener('click', (e) => {
-    const row = e.target.closest('[data-cat-id]');
-    const item = row && catalogue.cards.find((c) => c.id === row.dataset.catId);
-    if (item) openCardForm({ mode: 'catalogue', item });
-  });
-  $('#ac-manual', node).addEventListener('click', () => openCardForm({ mode: 'manual' }));
+    loadCatalogue().then(() => { if (sheet.node === node) show(); });
+    search.addEventListener('input', () => { pick.query = search.value; show(); });
+    list.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-issuer], [data-cat-id]');
+      if (!row) return;
+      if (row.dataset.issuer !== undefined) {
+        const issuer = catalogueIssuers().find((i) => i.name === row.dataset.issuer);
+        if (issuer) openIssuer(issuer);
+      } else {
+        const item = catalogue.cards.find((c) => c.id === row.dataset.catId);
+        if (item) confirmCard(item, () => institutions('back'));       // a card result goes straight to the confirmation
+      }
+    });
+    $('#ac-manual', node).addEventListener('click', () => byHand('', () => institutions('back')));
+  }
+
+  // An institution with one type of card skips the type level; back then returns to the institutions.
+  function openIssuer(issuer) {
+    const kinds = kindsAt(issuer);
+    if (kinds.length === 1) cards(issuer, kinds[0], () => institutions('back'), 'fwd');
+    else types(issuer, 'fwd');
+  }
+
+  // Level 2: the card types this institution has.
+  function types(issuer, slide) {
+    const up = () => institutions('back');
+    const node = openSheet(issuer.name,
+      `<div class="sheet-list pick-list" id="ac-types">${kindsAt(issuer).map((k) =>
+         `<button type="button" class="row" data-kind="${k}"><span class="row-text"><span class="row-title">${esc(STRINGS.cardKindPlural[k])}</span>
+            <span class="row-sub">${esc(STRINGS.cardCount(ofKind(issuer, k).length))}</span></span>${ICONS.chev}</button>`).join('')}</div>
+       ${footer('ac-manual-here', STRINGS.cardNotListedAt(issuer.name))}`, Object.assign({ slide, back: up }, level));
+    $('#ac-types', node).addEventListener('click', (e) => {
+      const row = e.target.closest('[data-kind]');
+      if (row) cards(issuer, row.dataset.kind, () => types(issuer, 'back'), 'fwd');
+    });
+    $('#ac-manual-here', node).addEventListener('click', () => byHand(issuer.name, () => types(issuer, 'back')));
+  }
+
+  // Level 3: the cards of one type at one institution.
+  function cards(issuer, kind, up, slide) {
+    const owned = ownedIds();
+    const here = () => cards(issuer, kind, up, 'back');
+    const node = openSheet(issuer.name + STRINGS.sep + STRINGS.cardKindPlural[kind],
+      `<div class="sheet-list pick-list" id="ac-cards">${ofKind(issuer, kind).map((c) =>
+         `<button type="button" class="row" data-cat-id="${esc(c.id)}"><span class="row-text"><span class="row-title">${esc(c.name)}</span>
+            ${c.networks.length ? `<span class="row-sub">${esc(c.networks.join(' / '))}</span>` : ''}</span>${addedBadge(owned, c)}${ICONS.chev}</button>`).join('')}</div>
+       ${footer('ac-manual-here', STRINGS.cardNotListedAt(issuer.name))}`, Object.assign({ slide, back: up }, level));
+    $('#ac-cards', node).addEventListener('click', (e) => {
+      const row = e.target.closest('[data-cat-id]');
+      const item = row && catalogue.cards.find((c) => c.id === row.dataset.catId);
+      if (item) confirmCard(item, here);
+    });
+    $('#ac-manual-here', node).addEventListener('click', () => byHand(issuer.name, here));
+  }
+
+  institutions(null);
 }
 
 function colourPickerHtml(selected) {
@@ -2439,7 +2529,8 @@ function colourPickerHtml(selected) {
 // Anything that looks like a long run of digits is refused: card numbers do not belong here.
 const looksLikeCardNumber = (text) => /\d{8,}/.test(String(text).replace(/[\s-]/g, ''));
 
-// opts: { mode: 'catalogue', item } | { mode: 'manual' } | { mode: 'edit', card }
+// opts: { mode: 'catalogue', item } | { mode: 'manual', issuer } | { mode: 'edit', card }
+// From the picker it also gets `back` (up one level) and `slide`, and stays in the same sheet.
 function openCardForm(opts) {
   const manual = opts.mode === 'manual', edit = opts.mode === 'edit';
   const card = edit ? opts.card : null;
@@ -2450,7 +2541,7 @@ function openCardForm(opts) {
        <p class="row-sub">${esc([shown.issuer, STRINGS.cardKinds[shown.kind], shown.networks.join(' / ')].filter(Boolean).join(STRINGS.sep))}</p></div>`;
   const manualFields = !manual ? '' :
     `<label class="field"><span class="label">${esc(STRINGS.cardIssuer)}</span>
-       <input class="input" type="text" id="cf-issuer" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="${esc(STRINGS.cardIssuerPlaceholder)}"></label>
+       <input class="input" type="text" id="cf-issuer" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="${esc(STRINGS.cardIssuerPlaceholder)}" value="${esc(opts.issuer || '')}"></label>
      <label class="field"><span class="label">${esc(STRINGS.cardName)}</span>
        <input class="input" type="text" id="cf-name" maxlength="80" autocomplete="off" autocapitalize="words" placeholder="${esc(STRINGS.cardNamePlaceholder)}"></label>
      <fieldset class="field"><legend>${esc(STRINGS.cardKind)}</legend><div class="options three" id="cf-kinds">${CARD_KINDS.map((k, i) =>
@@ -2458,7 +2549,7 @@ function openCardForm(opts) {
      <label class="field"><span class="label">${esc(STRINGS.cardNetwork)}</span>
        <select class="input" id="cf-network"><option value="">${esc(STRINGS.cardNetworkNone)}</option>${CARD_NETWORKS.map((n) =>
          `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select></label>`;
-  const node = openSheet(edit ? STRINGS.editCard : STRINGS.addCard,
+  const node = openSheet(edit ? STRINGS.editCard : manual ? STRINGS.addOwnCard : STRINGS.confirmCard,
     `${summary}
      <p class="help" id="cf-note">${esc(STRINGS.cardNumberNote)}</p>
      ${manualFields}
@@ -2473,7 +2564,7 @@ function openCardForm(opts) {
      <div id="cf-actions">
        <div class="btn-row">
          <button type="button" class="btn" id="cf-cancel">${esc(edit ? STRINGS.cancel : STRINGS.back)}</button>
-         <button type="button" class="btn primary" id="cf-save">${esc(edit ? STRINGS.save : STRINGS.addCard)}</button>
+         <button type="button" class="btn primary" id="cf-save">${esc(edit ? STRINGS.save : STRINGS.addCardSave)}</button>
        </div>
        ${edit ? `<div class="btn-row"><button type="button" class="btn ghost-danger" id="cf-remove">${esc(STRINGS.removeCard)}</button></div>` : ''}
      </div>
@@ -2483,13 +2574,13 @@ function openCardForm(opts) {
          <button type="button" class="btn" id="cf-confirm-cancel">${esc(STRINGS.cancel)}</button>
          <button type="button" class="btn danger" id="cf-confirm-remove">${esc(STRINGS.removeCard)}</button>
        </div>
-     </div>`);
+     </div>`, edit ? {} : { cls: 'picker', back: opts.back, slide: opts.slide, focusTitle: !!opts.back });
   const last4 = $('#cf-last4', node);
   last4.addEventListener('input', () => {
     const digits = last4.value.replace(/\D/g, '').slice(0, 4);
     if (digits !== last4.value) last4.value = digits;
   });
-  $('#cf-cancel', node).addEventListener('click', () => { if (edit) closeSheet(); else openAddCardSheet(); });
+  $('#cf-cancel', node).addEventListener('click', () => { if (!edit && opts.back) opts.back(); else closeSheet(); });
   if (edit) {
     const showConfirm = (on) => { $('#cf-actions', node).hidden = on; $('#cf-confirm', node).hidden = !on; };
     $('#cf-remove', node).addEventListener('click', () => { showConfirm(true); $('#cf-confirm-cancel', node).focus(); });
@@ -2528,7 +2619,7 @@ function openCardForm(opts) {
     saveState();
     closeSheet();
     render();
-    showToast(edit ? STRINGS.cardSaved : STRINGS.cardAddedToast, { ms: 2000 });
+    showToast(edit ? STRINGS.cardSaved : STRINGS.cardAddedNamed(manual ? name : opts.item.name), { ms: 2500 });
   });
 }
 
@@ -2582,8 +2673,10 @@ VIEWS.profile = function renderProfile() {
     `<div class="page">
        <div class="section-head"><span>${esc(STRINGS.myCards)}</span></div>
        <div class="card" id="card-list">
-         ${tiles || `<p class="status-line muted" id="no-cards">${esc(STRINGS.noCards)}</p>`}
-         <button type="button" class="row plain row-action" id="btn-add-card" data-act="card-add">${esc(STRINGS.addCard)}</button>
+         ${tiles
+           ? `${tiles}<button type="button" class="row plain row-action" id="btn-add-card" data-act="card-add">${esc(STRINGS.addACard)}</button>`
+           : `<div class="empty-cards"><p id="no-cards">${esc(STRINGS.noCards)}</p>
+                <button type="button" class="btn primary" id="btn-add-card" data-act="card-add">${esc(STRINGS.addACard)}</button></div>`}
        </div>
        ${archivedHtml}
 
@@ -2855,10 +2948,10 @@ function openDeleteAllSheet() {
 }
 
 /* =====================================================================
-   19. First-run setup (three steps; can be skipped at any step)
+   19. First-run setup (two steps; can be skipped at either)
    ===================================================================== */
 function openWelcome() {
-  const ob = { step: 1, picked: new Set(), query: '' };
+  let step = 1;
   // However the sheet goes away (Skip, Done, ×, backdrop, Escape), setup is not shown again.
   const finished = () => {
     if (!state.settings.onboarded) { state.settings.onboarded = true; saveState(); }
@@ -2866,45 +2959,15 @@ function openWelcome() {
   const buttons = (last) =>
     `<div class="btn-row"><button type="button" class="btn" id="ob-skip">${esc(STRINGS.skip)}</button>
        <button type="button" class="btn primary" id="${last ? 'ob-done' : 'ob-next'}">${esc(last ? STRINGS.done : STRINGS.next)}</button></div>`;
-  const stepLine = () => `<p class="ob-step" id="ob-step">${esc(STRINGS.obStep(ob.step, 3))}</p>`;
-
-  function addPickedCards() {
-    const owned = new Set(state.cards.map((c) => c.catalogueId).filter(Boolean));
-    let added = 0;
-    catalogue.cards.forEach((item) => {
-      if (!ob.picked.has(item.id) || owned.has(item.id)) return;
-      createCard({ catalogueId: item.id, issuer: item.issuer, name: item.name, kind: item.kind, networks: item.networks.slice() });
-      added += 1;
-    });
-    ob.picked.clear();
-    if (added) { saveState(); if (!ui.amount) resetDraft(); }
-  }
+  const stepLine = () => `<p class="ob-step" id="ob-step">${esc(STRINGS.obStep(step, 2))}</p>`;
 
   function show() {
     let node;
-    if (ob.step === 1) {
+    if (step === 1) {
       node = openSheet(STRINGS.obTitle1,
         `${stepLine()}<p class="ob-lead">${esc(STRINGS.obBody1)}</p>
          <p class="help" id="ob-privacy">${esc(STRINGS.privacy)}</p>${buttons(false)}`, { onClose: finished });
-    } else if (ob.step === 2) {
-      node = openSheet(STRINGS.obTitle2,
-        `${stepLine()}<p class="help">${esc(STRINGS.obBody2)} ${esc(STRINGS.cardNumberNote)}</p>
-         <input class="input search" type="search" id="ob-search" autocomplete="off" autocapitalize="off" spellcheck="false"
-           placeholder="${esc(STRINGS.cardSearchPlaceholder)}" aria-label="${esc(STRINGS.cardSearchLabel)}" value="${esc(ob.query)}">
-         <div class="sheet-list scroll-list" id="ob-cards"></div>${buttons(false)}`, { onClose: finished });
-      const list = $('#ob-cards', node), search = $('#ob-search', node);
-      const fill = () => {
-        list.innerHTML = catalogue.status === 'ok'
-          ? catalogueListHtml(searchCatalogue(ob.query, 'all'), 'check', ob.picked)
-          : catalogueStatusHtml(STRINGS.obCardListFailed);
-      };
-      fill();
-      loadCatalogue().then(() => { if (sheet.node === node) fill(); });
-      search.addEventListener('input', () => { ob.query = search.value; fill(); });
-      list.addEventListener('change', (e) => {
-        if (!e.target.value) return;
-        if (e.target.checked) ob.picked.add(e.target.value); else ob.picked.delete(e.target.value);
-      });
+      $('#ob-next', node).addEventListener('click', () => { step = 2; show(); });
     } else {
       node = openSheet(STRINGS.obTitle3,
         `${stepLine()}<p class="ob-lead">${esc(STRINGS.obBody3)}</p>
@@ -2921,18 +2984,10 @@ function openWelcome() {
           $('#ob-loc-error', node).textContent = STRINGS.locDenied;
         });
       });
+      $('#ob-done', node).addEventListener('click', () => { closeSheet(); switchTab('add'); });
     }
     $('#ob-skip', node).addEventListener('click', closeSheet);
-    const next = $('#ob-next', node);
-    if (next) next.addEventListener('click', () => {
-      if (ob.step === 2) addPickedCards();     // cards chosen here are kept even if step 3 is skipped
-      ob.step += 1;
-      show();
-    });
-    const done = $('#ob-done', node);
-    if (done) done.addEventListener('click', () => { closeSheet(); switchTab('add'); });
   }
-  loadCatalogue();
   show();
 }
 
@@ -3018,7 +3073,10 @@ const ACTIONS = {
 };
 
 el.app.addEventListener('click', (e) => {
-  if (swipe.suppressClick) { swipe.suppressClick = false; return; }
+  if (swipe.suppressClick) {
+    swipe.suppressClick = false;
+    if (el.view.contains(e.target)) return;      // only the list swallows the click after a swipe; the tab bar never does
+  }
   const key = e.target.closest('[data-key]');
   if (key) { pressKey(key.dataset.key); return; }
   const target = e.target.closest('[data-act]');
@@ -3031,7 +3089,7 @@ el.app.addEventListener('change', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (sheet.node) {
-    if (e.key === 'Escape') { e.preventDefault(); closeSheet(); }
+    if (e.key === 'Escape') { e.preventDefault(); if (sheet.back) sheet.back(); else closeSheet(); }   // up one level, or close
     else if (e.key === 'Tab') trapFocus(e);
     return;
   }
@@ -3080,7 +3138,7 @@ setKeyboardOverlap(0);
 render();
 probeDownloads().then(() => { if (ui.tab === 'profile' && !sheet.node) { const b = $('#btn-download'); if (b) b.hidden = !ui.canDownload; } });
 registerServiceWorker();
-// First launch with nothing saved yet: the three-step welcome.
+// First launch with nothing saved yet: the two-step welcome.
 if (!state.settings.onboarded && state.expenses.length === 0) openWelcome();
 
 })();

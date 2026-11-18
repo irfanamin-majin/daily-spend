@@ -61,16 +61,22 @@ def browser():
         b.close()
 
 
+# Maple Bank has credit, debit and prepaid cards; American Express has credit cards only;
+# The Northern Trust has one debit card (and sorts under N); one card has an unknown kind.
 FIXTURE_CARDS = {
     "version": "test", "lastChecked": "2026-11-15",
     "issuers": [{"id": "maple", "name": "Maple Bank"}, {"id": "prairie", "name": "Prairie Credit Union"},
-                {"id": "amex", "name": "American Express"}],
+                {"id": "amex", "name": "American Express"}, {"id": "northern", "name": "The Northern Trust"}],
     "cards": [
         {"id": "maple-rewards-visa", "issuerId": "maple", "name": "Maple Rewards Visa", "kind": "credit", "networks": ["Visa"], "extra": 1},
+        {"id": "maple-travel-mc", "issuerId": "maple", "name": "Maple Travel World Mastercard", "kind": "credit", "networks": ["Mastercard"]},
         {"id": "maple-everyday-debit", "issuerId": "maple", "name": "Maple Everyday Debit", "kind": "debit", "networks": ["Interac", "Visa Debit"]},
+        {"id": "maple-prepaid", "issuerId": "maple", "name": "Maple Travel Prepaid", "kind": "prepaid", "networks": ["Visa"]},
         {"id": "prairie-cash-mc", "issuerId": "prairie", "name": "Prairie Cash Back Mastercard", "kind": "credit", "networks": ["Mastercard"]},
         {"id": "prairie-prepaid", "issuerId": "prairie", "name": "Prairie Reloadable Prepaid", "kind": "prepaid", "networks": ["Mastercard"]},
         {"id": "amex-cobalt", "issuerId": "amex", "name": "American Express Cobalt Card", "kind": "credit", "networks": ["American Express"]},
+        {"id": "amex-green", "issuerId": "amex", "name": "American Express Green Card", "kind": "credit", "networks": ["American Express"]},
+        {"id": "northern-client", "issuerId": "northern", "name": "Northern Client Card", "kind": "debit", "networks": ["Interac"]},
         {"id": "bad-kind", "issuerId": "amex", "name": "Ignored card", "kind": "charge", "networks": ["Visa"]},
     ],
 }
@@ -154,6 +160,14 @@ class App:
     def add(self, amount, category):
         self.type_amount(amount)
         self.chip(category).click()
+
+    def pick_card(self, issuer, card, kind=None):
+        """In the open Add a card sheet: institution, then type (when asked for), then card. Ends on the confirm step."""
+        self.ui.locator(f'#ac-list [data-issuer="{issuer}"]').click()
+        if kind:
+            self.ui.locator(f'#ac-types [data-kind="{kind}"]').click()
+        self.ui.locator(f'#ac-cards .row:has-text("{card}")').click()
+        self.ui.locator("#cf-save").wait_for()
 
     def toast(self):
         return self.ui.locator("#toast-region .toast-text")

@@ -1,4 +1,4 @@
-"""Takes the v2 screenshots (390 by 844, light and dark).
+"""Takes the screenshots (390 by 844, light and dark).
 
 Run from the project folder:  python3 tests/take_screenshots.py <output folder>
 The output folder is required so screenshots never land in the repository by accident.
@@ -63,19 +63,10 @@ def main():
                           geolocation={"latitude": 51.0447, "longitude": -114.0719, "accuracy": 25})
                 shot = lambda name: app.page.screenshot(path=os.path.join(out, f"{name}-{scheme}.png"))
                 ui = app.ui
-                # first-run setup
+                # first-run setup: two steps
                 shot("first-run-1")
                 ui.locator("#ob-next").click()
-                ui.locator("#ob-cards .check-row").first.wait_for()
-                ui.locator('#ob-cards .check-row:has-text("Cobalt")').click()
-                ui.locator('#ob-cards .check-row:has-text("TD Access")').click()
-                shot("first-run-2-cards")
-                ui.locator("#ob-skip").click()
-                app.tab("profile")
-                ui.locator("#btn-setup-again").click()
-                ui.locator("#ob-next").click()
-                ui.locator("#ob-next").click()
-                shot("first-run-3-location")
+                shot("first-run-2-location")
                 ui.locator("#ob-skip").click()
 
                 app.seed(sample_state())
@@ -137,17 +128,25 @@ def main():
                 ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
                 shot("profile")
                 ui.locator("#view").evaluate("(v) => { v.scrollTop = 0; }")
+                # the institution-first card picker (the site's real card list)
                 ui.locator("#btn-add-card").click()
-                ui.locator("#ac-results .row").first.wait_for()
-                shot("add-card")
-                ui.locator('#ac-results .row:has-text("Tangerine")').click()
+                ui.locator("#ac-list .row").first.wait_for()
+                shot("picker-1-institutions")
+                ui.locator("#ac-search").fill("cash")
+                shot("picker-1-search")
+                ui.locator("#ac-search").fill("")
+                ui.locator("#ac-list [data-issuer]").filter(has=ui.locator('.row-title:text-is("TD")')).click()
+                shot("picker-2-types")
+                ui.locator('#ac-types [data-kind="credit"]').click()
+                shot("picker-3-cards")
+                ui.locator("#ac-cards .row").nth(1).click()
                 ui.locator("#cf-nick").fill("Groceries card")
                 ui.locator("#cf-last4").fill("7788")
-                shot("add-card-confirm")
-                ui.locator("#cf-cancel").click()
-                ui.locator("#ac-manual").click()
-                shot("add-card-by-hand")
-                app.page.keyboard.press("Escape")
+                shot("picker-4-confirm")
+                ui.locator("[data-sheet-back]").click()
+                ui.locator("#ac-manual-here").click()
+                shot("picker-by-hand")
+                ui.locator("[data-sheet-close]").click()
                 app.close()
             browser.close()
     finally:

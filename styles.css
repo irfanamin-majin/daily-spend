@@ -469,6 +469,30 @@ button.cat-row:active { background: var(--surface-2); }
 .swatch input:checked + span { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
 .swatch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 5px; }
 
+/* ===== v2.1: sheet levels and the institution-first card picker ===== */
+.backdrop.still, .sheet.still { animation: none; }        /* content replaced in place: no second rise */
+#sheet-title { outline: none; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-head.has-back { padding-left: 2px; }
+.back-btn { font-size: 30px; color: var(--accent); }
+.slide-fwd { animation: slide-fwd .22s ease-out; }
+.slide-back { animation: slide-back .22s ease-out; }
+@keyframes slide-fwd { from { transform: translateX(28px); opacity: 0; } }
+@keyframes slide-back { from { transform: translateX(-28px); opacity: 0; } }
+.sheet.picker { height: min(86dvh, calc(100dvh - var(--kb-overlap, 0px) - 12px)); }
+.sheet-body.pick-body { display: flex; flex-direction: column; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); }
+.pick-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--line); }
+.pick-foot { flex: none; width: auto; min-height: 52px; margin: 0 -16px; padding: 0 16px; border-top: 1px solid var(--line); }
+.mono {
+  flex: none; width: 38px; height: 38px; border-radius: 10px; background: var(--surface-2); color: var(--text-2);
+  display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; letter-spacing: .02em;
+}
+.empty-cards { padding: 20px 16px; text-align: center; color: var(--text-2); font-size: 15px; }
+.empty-cards .btn { margin-top: 14px; }
+
+/* ===== v2.1: capped day-by-day bars ===== */
+.break { stroke: var(--surface); stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.over-label { font-size: 9px; font-weight: 600; fill: var(--text); font-variant-numeric: tabular-nums; }
+
 /* All motion is off for people who ask for less of it. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

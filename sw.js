@@ -3,7 +3,7 @@
 
    Releasing a new version: change VERSION here (and STRINGS.version in app.js). Because files
    are served cache-first, a change is only picked up through a new VERSION. */
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const CACHE = 'ds-' + VERSION;
 const ASSETS = [
   './',
