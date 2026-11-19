@@ -482,16 +482,41 @@ button.cat-row:active { background: var(--surface-2); }
 .sheet-body.pick-body { display: flex; flex-direction: column; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); }
 .pick-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--line); }
 .pick-foot { flex: none; width: auto; min-height: 52px; margin: 0 -16px; padding: 0 16px; border-top: 1px solid var(--line); }
-.mono {
-  flex: none; width: 38px; height: 38px; border-radius: 10px; background: var(--surface-2); color: var(--text-2);
-  display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; letter-spacing: .02em;
-}
 .empty-cards { padding: 20px 16px; text-align: center; color: var(--text-2); font-size: 15px; }
 .empty-cards .btn { margin-top: 14px; }
 
 /* ===== v2.1: capped day-by-day bars ===== */
 .break { stroke: var(--surface); stroke-width: 1.6; stroke-linecap: round; fill: none; }
 .over-label { font-size: 9px; font-weight: 600; fill: var(--text); font-variant-numeric: tabular-nums; }
+
+/* ===== v2.2: budget groups ===== */
+.chip.has-caption .chip-name { display: block; -webkit-line-clamp: unset; white-space: nowrap; text-overflow: ellipsis; }
+.chip-group { font-size: 9px; line-height: 1.15; color: var(--text-2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.group-check { background: var(--bg); }
+.group-check .row-title { font-weight: 600; }
+.grp + .grp { border-top: 1px solid var(--line); }
+.grp-row .chev { margin-left: 4px; transition: transform .15s; }
+.grp-row[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.sub-rows { background: var(--bg); border-top: 1px solid var(--line); }
+.sub-rows .cat-row { padding-left: 24px; }
+.sub-rows .cat-row .name { font-size: 15px; }
+.group-name { font-size: 20px; font-weight: 600; padding-top: 10px; }
+#group-view .month-total { padding-bottom: 16px; }
+
+/* ===== v2.2: institution badges (text on the app's own palette; never a logo or a brand colour) ===== */
+.ibadge {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  min-width: 40px; height: 26px; padding: 0 6px; border-radius: 7px; color: #FFFFFF;
+  font-size: 11px; font-weight: 700; letter-spacing: .01em; line-height: 1; white-space: nowrap;
+}
+.ibadge::before { content: attr(data-t); }
+.ibadge.ib-0 { background: #0B6E69; } .ibadge.ib-1 { background: #1D5FA6; } .ibadge.ib-2 { background: #5A45B0; } .ibadge.ib-3 { background: #8B3A94; }
+.ibadge.ib-4 { background: #A93261; } .ibadge.ib-5 { background: #B23B2A; } .ibadge.ib-6 { background: #9A5300; } .ibadge.ib-7 { background: #6A6A0E; }
+.ibadge.ib-8 { background: #2F7A33; } .ibadge.ib-9 { background: #006B78; } .ibadge.ib-10 { background: #485468; } .ibadge.ib-11 { background: #7C4A2B; }
+.ibadge.ib-n { background: #6B7280; }
+.option .ibadge, .cat-line .ibadge { margin-right: 8px; }
+.option .ibadge { min-height: 0; padding: 0 6px; border: 0; border-radius: 7px; color: #FFFFFF; font-size: 11px; font-weight: 700; }   /* not an option face */
+.card-tile .card-swatch { width: 5px; height: 36px; border-radius: 3px; margin-right: -2px; }   /* the card's own colour, as an accent */
 
 /* All motion is off for people who ask for less of it. */
 @media (prefers-reduced-motion: reduce) {

@@ -12,13 +12,13 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright  # noqa: E402
 
-from conftest import CHROME, SAMPLE_ROWS, SERVE, SUB, App, free_port, make_card, make_state  # noqa: E402
+from conftest import CHROME, SAMPLE_ROWS, SERVE, SUB, App, free_port, make_card, make_state, make_v2_state  # noqa: E402
 
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 CARDS = [
-    make_card("card-a", "American Express Cobalt Card", nickname="Cobalt", last4="1234", issuer="American Express",
+    make_card("card-a", "American Express Cobalt Card", nickname="Cobalt", last4="1234", issuer="American Express Canada",
               networks=("American Express",), colour="rose", catalogue_id="amex-cobalt"),
-    make_card("card-b", "TD Access Card", kind="debit", issuer="TD Canada Trust", networks=("Interac", "Visa Debit"),
+    make_card("card-b", "TD Access Card", kind="debit", issuer="TD", networks=("Interac", "Visa Debit"),
               last4="0042", colour="green", catalogue_id="td-access-card"),
     make_card("card-c", "KOHO Prepaid Mastercard", kind="prepaid", issuer="KOHO", networks=("Mastercard",), colour="indigo",
               catalogue_id="koho-prepaid-mastercard"),
@@ -36,6 +36,8 @@ def sample_state():
         rows.append(r + (card, PIN if i in (0, 1, 3, 6, 9) else None))
     rows.append(("2026-11-08", 2500, "entertainment", "prepaid", "Cineplex", "", "card-c", None))
     rows.append(("2026-11-13", 475, "dining", "debit", "Tim Hortons", "", "card-b", PIN))
+    rows.append(("2026-11-06", 14200, "insurance.health-dental-insurance", "pad", "Sun Life", "", None, None))
+    rows.append(("2026-11-04", 9800, "transportation.car-insurance", "pad", "", "", None, None))
     return make_state(rows, cards=CARDS)
 
 
@@ -69,9 +71,21 @@ def main():
                 shot("first-run-2-location")
                 ui.locator("#ob-skip").click()
 
+                # the one-time notice after the move to budget groups (a version 0.2.1 state)
+                app.page.evaluate("s => localStorage.setItem('dailyspend.state', JSON.stringify(s))", make_v2_state(SAMPLE_ROWS))
+                app.page.reload()
+                ui.locator("#mig-ok").wait_for()
+                shot("migration-notice")
+                ui.locator("#mig-ok").click()
+
                 app.seed(sample_state())
                 # Add
                 shot("add")
+                app.type_amount("1")
+                ui.locator(".chip-more").click()
+                shot("add-more-sheet-groups")
+                app.page.keyboard.press("Escape")
+                ui.locator('[data-key="back"]').click()
                 app.type_amount("4.75")
                 ui.locator("#details-row").click()
                 ui.locator('#d-pay label:has-text("TD Access")').click()
@@ -119,12 +133,24 @@ def main():
                 # Summary
                 app.tab("summary")
                 shot("summary-charts")
+                ui.locator('#donut .slice[data-group="food"]').dispatch_event("click")
+                shot("summary-group-view")
+                ui.locator("#group-back").click()
+                ui.locator('#by-group .grp-row:has-text("Miscellaneous")').click()
+                ui.locator("#by-group").scroll_into_view_if_needed()
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('by-group').offsetTop - 40; }")
+                shot("summary-by-group-open")
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
+                shot("summary-tax-time")
                 ui.locator("#by-card").scroll_into_view_if_needed()
                 ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
                 shot("summary-by-card")
                 # Profile and cards
                 app.tab("profile")
+                app.page.wait_for_timeout(300)
                 shot("my-cards")
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('category-list').offsetTop - 60; }")
+                shot("profile-categories")
                 ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
                 shot("profile")
                 ui.locator("#view").evaluate("(v) => { v.scrollTop = 0; }")
@@ -135,7 +161,7 @@ def main():
                 ui.locator("#ac-search").fill("cash")
                 shot("picker-1-search")
                 ui.locator("#ac-search").fill("")
-                ui.locator("#ac-list [data-issuer]").filter(has=ui.locator('.row-title:text-is("TD")')).click()
+                ui.locator('#ac-list [data-issuer="RBC Royal Bank"]').click()
                 shot("picker-2-types")
                 ui.locator('#ac-types [data-kind="credit"]').click()
                 shot("picker-3-cards")

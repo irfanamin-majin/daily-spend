@@ -5,147 +5,176 @@
     {
       "id": "rbc",
       "name": "RBC Royal Bank",
-      "sourceUrl": "https://www.rbcroyalbank.com/credit-cards/index.html"
+      "sourceUrl": "https://www.rbcroyalbank.com/credit-cards/index.html",
+      "short": "RBC"
     },
     {
       "id": "td",
       "name": "TD",
-      "sourceUrl": "https://www.td.com/ca/en/personal-banking/products/credit-cards/browse-all"
+      "sourceUrl": "https://www.td.com/ca/en/personal-banking/products/credit-cards/browse-all",
+      "short": "TD"
     },
     {
       "id": "scotiabank",
       "name": "Scotiabank",
-      "sourceUrl": "https://www.scotiabank.com/ca/en/personal/credit-cards.html"
+      "sourceUrl": "https://www.scotiabank.com/ca/en/personal/credit-cards.html",
+      "short": "Scotia"
     },
     {
       "id": "bmo",
       "name": "BMO",
-      "sourceUrl": "https://www.bmo.com/main/personal/credit-cards/all-cards/"
+      "sourceUrl": "https://www.bmo.com/main/personal/credit-cards/all-cards/",
+      "short": "BMO"
     },
     {
       "id": "cibc",
       "name": "CIBC",
-      "sourceUrl": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards.html"
+      "sourceUrl": "https://www.cibc.com/en/personal-banking/credit-cards/all-credit-cards.html",
+      "short": "CIBC"
     },
     {
       "id": "national-bank",
       "name": "National Bank",
-      "sourceUrl": "https://www.nbc.ca/personal/mastercard-credit-cards-alt.html"
+      "sourceUrl": "https://www.nbc.ca/personal/mastercard-credit-cards-alt.html",
+      "short": "NBC"
     },
     {
       "id": "desjardins",
       "name": "Desjardins",
-      "sourceUrl": "https://www.desjardins.com/en/credit-cards.html"
+      "sourceUrl": "https://www.desjardins.com/en/credit-cards.html",
+      "short": "Desj"
     },
     {
       "id": "amex",
       "name": "American Express Canada",
-      "sourceUrl": "https://www.americanexpress.com/ca/en/credit-cards/card-types/"
+      "sourceUrl": "https://www.americanexpress.com/ca/en/credit-cards/card-types/",
+      "short": "Amex"
     },
     {
       "id": "tangerine",
       "name": "Tangerine",
-      "sourceUrl": "https://www.tangerine.ca/en/personal/spend/credit-cards"
+      "sourceUrl": "https://www.tangerine.ca/en/personal/spend/credit-cards",
+      "short": "Tang"
     },
     {
       "id": "simplii",
       "name": "Simplii Financial",
-      "sourceUrl": "https://www.simplii.com/en/credit-cards.html"
+      "sourceUrl": "https://www.simplii.com/en/credit-cards.html",
+      "short": "Simpl"
     },
     {
       "id": "pc-financial",
       "name": "PC Financial",
-      "sourceUrl": "https://www.pcfinancial.ca/en/credit-cards/"
+      "sourceUrl": "https://www.pcfinancial.ca/en/credit-cards/",
+      "short": "PC"
     },
     {
       "id": "canadian-tire",
       "name": "Canadian Tire Bank (Triangle)",
-      "sourceUrl": "https://www.canadiantire.ca/mastercard"
+      "sourceUrl": "https://www.canadiantire.ca/mastercard",
+      "short": "CTB"
     },
     {
       "id": "rogers",
       "name": "Rogers Bank",
-      "sourceUrl": "https://www.rogersbank.com/en/"
+      "sourceUrl": "https://www.rogersbank.com/en/",
+      "short": "Rogers"
     },
     {
       "id": "brim",
       "name": "Brim Financial",
-      "sourceUrl": "https://brimfinancial.com/"
+      "sourceUrl": "https://brimfinancial.com/",
+      "short": "Brim"
     },
     {
       "id": "neo",
       "name": "Neo Financial",
-      "sourceUrl": "https://www.neofinancial.com/credit"
+      "sourceUrl": "https://www.neofinancial.com/credit",
+      "short": "Neo"
     },
     {
       "id": "mbna",
       "name": "MBNA",
-      "sourceUrl": "https://www.mbna.ca/en/credit-cards/compare-credit-cards"
+      "sourceUrl": "https://www.mbna.ca/en/credit-cards/compare-credit-cards",
+      "short": "MBNA"
     },
     {
       "id": "capital-one",
       "name": "Capital One Canada",
-      "sourceUrl": "https://www.capitalone.ca/credit-cards/compare/"
+      "sourceUrl": "https://www.capitalone.ca/credit-cards/compare/",
+      "short": "Cap1"
     },
     {
       "id": "wealthsimple",
       "name": "Wealthsimple",
-      "sourceUrl": "https://www.wealthsimple.com/en-ca/spend"
+      "sourceUrl": "https://www.wealthsimple.com/en-ca/spend",
+      "short": "WS"
     },
     {
       "id": "koho",
       "name": "KOHO",
-      "sourceUrl": "https://www.koho.ca/prepaid-mastercard/"
+      "sourceUrl": "https://www.koho.ca/prepaid-mastercard/",
+      "short": "KOHO"
     },
     {
       "id": "eq-bank",
       "name": "EQ Bank",
-      "sourceUrl": "https://www.eqbank.ca/personal-banking/payments/card"
+      "sourceUrl": "https://www.eqbank.ca/personal-banking/payments/card",
+      "short": "EQ"
     },
     {
       "id": "home-trust",
       "name": "Home Trust",
-      "sourceUrl": "https://visa.hometrust.ca/"
+      "sourceUrl": "https://visa.hometrust.ca/",
+      "short": "Home"
     },
     {
       "id": "walmart",
       "name": "Walmart Rewards (Duo Bank)",
-      "sourceUrl": "https://www.walmartrewards.ca/en/creditcards"
+      "sourceUrl": "https://www.walmartrewards.ca/en/creditcards",
+      "short": "WMT"
     },
     {
       "id": "atb",
       "name": "ATB Financial",
-      "sourceUrl": "https://www.atb.com/personal/everyday-banking/credit-cards/"
+      "sourceUrl": "https://www.atb.com/personal/everyday-banking/credit-cards/",
+      "short": "ATB"
     },
     {
       "id": "manulife",
       "name": "Manulife Bank",
-      "sourceUrl": "https://www.manulifebank.ca/personal-banking/credit-cards.html"
+      "sourceUrl": "https://www.manulifebank.ca/personal-banking/credit-cards.html",
+      "short": "Manu"
     },
     {
       "id": "vancity",
       "name": "Vancity",
-      "sourceUrl": "https://www.vancity.com/bank/credit-cards/enviro-classic"
+      "sourceUrl": "https://www.vancity.com/bank/credit-cards/enviro-classic",
+      "short": "Vcity"
     },
     {
       "id": "coast-capital",
       "name": "Coast Capital",
-      "sourceUrl": "https://www.coastcapitalsavings.com/credit-cards"
+      "sourceUrl": "https://www.coastcapitalsavings.com/credit-cards",
+      "short": "Coast"
     },
     {
       "id": "meridian",
       "name": "Meridian",
-      "sourceUrl": "https://www.meridiancu.ca/personal/credit-cards"
+      "sourceUrl": "https://www.meridiancu.ca/personal/credit-cards",
+      "short": "Merid"
     },
     {
       "id": "servus",
       "name": "Servus Credit Union",
-      "sourceUrl": "https://servus.ca/personal/borrow/credit-cards"
+      "sourceUrl": "https://servus.ca/personal/borrow/credit-cards",
+      "short": "Servus"
     },
     {
       "id": "alterna",
       "name": "Alterna Savings",
-      "sourceUrl": "https://www.alterna.ca/en/personal/borrowing/credit-cards"
+      "sourceUrl": "https://www.alterna.ca/en/personal/borrowing/credit-cards",
+      "short": "ALT"
     }
   ],
   "cards": [

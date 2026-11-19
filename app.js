@@ -6,7 +6,7 @@
    ===================================================================== */
 const STRINGS = {
   appName: 'Daily Spend',
-  version: '0.2.1',
+  version: '0.2.2',
   versionLabel: (v) => `Version ${v}`,
   privacy: 'Your entries stay on this device. No account, no tracking. Nothing is sent anywhere, except that opening a location in Google Maps shares that location with Google.',
   tabs: { add: 'Add', history: 'History', summary: 'Summary', profile: 'Profile' },
@@ -62,10 +62,13 @@ const STRINGS = {
   expenseDeleted: 'Expense deleted',
   // Summary
   expenseCount: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'}`,
-  byCategory: 'By category',
+  byGroup: 'By group',
+  allGroups: '‹ All groups',
+  groupShare: (pct, month) => `${pct}% of ${month}`,
+  groupItems: (name) => `In ${name}`,
   taxTime: (year) => `Tax time ${year}`,
-  taxRows: { medical: 'Medical & dental', donation: 'Donations', childcare: 'Childcare' },
-  taxFootnote: 'Totals of expenses in tagged categories. Eligibility rules apply.',
+  taxRows: { medical: 'Medical', donation: 'Donations', childcare: 'Childcare' },
+  taxFootnote: "Totals of tagged categories. Only private health plan premiums count; provincial plan premiums don't.",
   // Profile: storage
   storageStandalone: 'Saved on this device',
   storageEmbedded: 'Saved in this browser only. This test version can be cleared, so copy a backup now and then.',
@@ -102,6 +105,7 @@ const STRINGS = {
   editCategory: 'Edit category',
   hidden: 'Hidden',
   catName: 'Name',
+  catGroup: 'Group',
   catEmoji: 'Emoji',
   catTaxTag: 'Tax tag',
   catHide: 'Hide from Add',
@@ -131,6 +135,9 @@ const STRINGS = {
   optional: 'Optional',
   again: 'Again',
   reload: 'Reload',
+  ok: 'OK',
+  groupsNoticeTitle: 'Categories updated',
+  groupsNotice: 'Categories are now arranged in 8 budget groups. Your entries were moved; nothing was deleted.',
   updateReady: 'Update ready',
   // Location
   location: 'Location',
@@ -167,6 +174,8 @@ const STRINGS = {
   filterCategory: 'Category',
   filterCategoryCount: (n) => `Category · ${n}`,
   filterCategoryTitle: 'Filter by category',
+  filterWholeGroup: (name) => `Everything in ${name}`,
+  filterWholeGroupHint: 'Select the whole group',
   filterCard: 'Card',
   filterCardTitle: 'Filter by card',
   filterAllCards: 'All cards and other ways',
@@ -179,14 +188,13 @@ const STRINGS = {
   noResults: 'No matching expenses.',
   // Summary: charts and cards
   byCard: 'By card',
-  otherSlice: 'Other categories',
   sliceLabel: (name, amount, pct) => `${name}, ${amount}, ${pct}%`,
   barLabel: (day, amount) => `${day}, ${amount}`,
   wholeDollars: (n) => `$${n}`,
-  donutLabel: 'Spending by category. Each slice opens its expenses.',
+  donutLabel: 'Spending by group. Each slice opens that group.',
   dailyTitle: 'Day by day',
   dailyLabel: 'Spending by day. Each bar opens that day.',
-  chartHint: 'Tap a slice or a bar to see its expenses.',
+  chartHint: 'Tap a slice to open a group, or a bar to see that day.',
   // Cards
   myCards: 'My cards',
   otherWays: 'Other ways',
@@ -212,6 +220,9 @@ const STRINGS = {
   cardCount: (n) => `${n} ${n === 1 ? 'card' : 'cards'}`,
   cardKindPlural: { credit: 'Credit cards', debit: 'Debit cards', prepaid: 'Other cards' },
   cardsGroup: 'Cards',
+  yourInstitutions: 'Your institutions',
+  popularInstitutions: 'Popular',
+  allInstitutions: 'All institutions',
   cardAdded: 'Added',
   otherIssuer: 'Other',
   cardIssuer: 'Bank or issuer',
@@ -250,11 +261,12 @@ const STRINGS = {
    2. Constants
    ===================================================================== */
 const STORAGE_KEY = 'dailyspend.state';
+const V2_BACKUP_KEY = STORAGE_KEY + '.v2-backup';   // the state as it was before the move to budget groups
 const LEGACY_KEY = 'dailyspend.v1';          // the v1 test page; read once and migrated
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const MAX_CENTS = 9999999;
 const BOM = '﻿';
-const CSV_HEADER = ['id', 'date', 'amount', 'category', 'payment_method', 'card', 'card_last4', 'merchant', 'note', 'tax_tag',
+const CSV_HEADER = ['id', 'date', 'amount', 'category_group', 'category', 'payment_method', 'card', 'card_last4', 'merchant', 'note', 'tax_tag',
   'latitude', 'longitude', 'location_accuracy_m', 'created_at', 'updated_at'];
 const TAX_TAGS = ['medical', 'donation', 'childcare'];
 const DEFAULT_EMOJI = '📦';
@@ -285,28 +297,104 @@ const CARD_NETWORKS = ['Visa', 'Mastercard', 'American Express', 'Interac', 'Vis
 const CARD_COLOURS = ['teal', 'blue', 'indigo', 'purple', 'rose', 'orange', 'green', 'slate'];
 const NO_CARD = 'none';                       // filter value for "Cash & other"
 
-const DEFAULT_CATEGORIES = [
-  ['groceries', '🛒', 'Groceries', null],
-  ['dining', '☕', 'Dining & coffee', null],
-  ['gas', '⛽', 'Gas & parking', null],
-  ['transit', '🚇', 'Transit', null],
-  ['shopping', '🛍️', 'Shopping', null],
-  ['phone', '📱', 'Phone & internet', null],
-  ['utilities', '💡', 'Hydro & utilities', null],
-  ['housing', '🏠', 'Rent or mortgage', null],
-  ['condo', '🏢', 'Condo fees', null],
-  ['propertytax', '🏛️', 'Property tax', null],
-  ['car', '🚗', 'Car costs', null],
-  ['medical', '🩺', 'Medical & dental', 'medical'],
-  ['childcare', '🧸', 'Childcare', 'childcare'],
-  ['donations', '🎗️', 'Donations', 'donation'],
-  ['subscriptions', '📺', 'Subscriptions', null],
-  ['entertainment', '🎟️', 'Entertainment', null],
-  ['travel', '✈️', 'Travel', null],
-  ['personalcare', '💇', 'Personal care', null],
-  ['gifts', '🎁', 'Gifts', null],
-  ['other', '📦', 'Other', null]
+// Categories have two levels. The eight groups are fixed; the items inside them are what
+// the user picks. Built-in item ids are "<group id>.<slug of the name>", e.g. food.groceries.
+const GROUPS = [
+  { id: 'housing', name: 'Housing', emoji: '🏠' },
+  { id: 'debt', name: 'Debt Payments', emoji: '💳' },
+  { id: 'communications', name: 'Communications', emoji: '📱' },
+  { id: 'food', name: 'Food', emoji: '🍽️' },
+  { id: 'transportation', name: 'Transportation', emoji: '🚗' },
+  { id: 'recreation', name: 'Recreation', emoji: '🎟️' },
+  { id: 'misc', name: 'Miscellaneous', emoji: '🧩' },
+  { id: 'insurance', name: 'Insurance', emoji: '🛡️' }
 ];
+const DEFAULT_GROUP = 'misc';                 // where custom and unknown items go
+const FALLBACK_CATEGORY = 'misc.other';
+
+// [group id, name, emoji, tax tag]
+const DEFAULT_ITEMS = [
+  ['housing', 'Mortgage / Rent', '🏠', null],
+  ['housing', 'Property Taxes', '🏛️', null],
+  ['housing', 'Water & Sewage', '🚰', null],
+  ['housing', 'Gas & Hydro', '💡', null],
+  ['housing', 'Property / Tenant Insurance', '🛡️', null],
+  ['housing', 'Home maintenance', '🔧', null],
+  ['housing', 'Condo fees', '🏢', null],
+  ['housing', 'Other housing', '🏠', null],
+  ['debt', 'Card interest & fees', '💳', null],
+  ['debt', 'Line of Credit', '🏦', null],
+  ['debt', 'Personal Loan', '🤝', null],
+  ['debt', 'Student Loan', '🎓', null],
+  ['debt', 'Other debt', '💳', null],
+  ['communications', 'Cell / Telephone', '📱', null],
+  ['communications', 'Television', '📺', null],
+  ['communications', 'Internet', '🌐', null],
+  ['communications', 'Subscriptions', '🔁', null],
+  ['food', 'Groceries', '🛒', null],
+  ['food', 'Restaurant / Take-Out', '🍔', null],
+  ['transportation', 'Car Loan / Lease Payments', '🚗', null],
+  ['transportation', 'Car Insurance', '🛡️', null],
+  ['transportation', 'Gas / Diesel', '⛽', null],
+  ['transportation', 'Car maintenance', '🔧', null],
+  ['transportation', 'Parking', '🅿️', null],
+  ['transportation', 'Transit', '🚇', null],
+  ['recreation', 'Travel / Vacation', '✈️', null],
+  ['recreation', 'Concerts / Sport Events', '🎟️', null],
+  ['recreation', 'Club Memberships', '🏋️', null],
+  ['recreation', 'Other Entertainment', '🎮', null],
+  ['misc', 'Education', '📚', null],
+  ['misc', 'Medical', '🩺', 'medical'],
+  ['misc', 'Clothing', '👕', null],
+  ['misc', 'Gifts', '🎁', null],
+  ['misc', 'Donations', '🎗️', 'donation'],
+  ['misc', 'Childcare', '🧸', 'childcare'],
+  ['misc', 'Shopping', '🛍️', null],
+  ['misc', 'Personal Care', '💇', null],
+  ['misc', 'Pets', '🐾', null],
+  ['misc', 'Fees', '🧾', null],
+  ['misc', 'Other', '📦', null],
+  ['insurance', 'Life Insurance', '❤️', null],
+  ['insurance', 'Disability Insurance', '♿', null],
+  ['insurance', 'Critical Illness Insurance', '🏥', null],
+  ['insurance', 'Health / Dental Insurance', '🦷', 'medical'],
+  ['insurance', 'Other insurance', '🛡️', null]
+];
+const slugOf = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const CAT_NAME_MAX = 32;
+
+// Chips a new user sees, in order, before any usage.
+const DEFAULT_CHIP_IDS = ['food.groceries', 'food.restaurant-take-out', 'transportation.gas-diesel', 'misc.shopping',
+  'transportation.transit', 'misc.personal-care', 'misc.medical'];
+
+// The 20 built-in categories of versions 0.1 and 0.2, and the item each one became:
+// [old id, old name, old tax tag, new item id]. Used by the migration and by CSV restore.
+const OLD_CATEGORIES = [
+  ['groceries', 'Groceries', null, 'food.groceries'],
+  ['dining', 'Dining & coffee', null, 'food.restaurant-take-out'],
+  ['gas', 'Gas & parking', null, 'transportation.gas-diesel'],
+  ['transit', 'Transit', null, 'transportation.transit'],
+  ['shopping', 'Shopping', null, 'misc.shopping'],
+  ['phone', 'Phone & internet', null, 'communications.cell-telephone'],
+  ['utilities', 'Hydro & utilities', null, 'housing.gas-hydro'],
+  ['housing', 'Rent or mortgage', null, 'housing.mortgage-rent'],
+  ['condo', 'Condo fees', null, 'housing.condo-fees'],
+  ['propertytax', 'Property tax', null, 'housing.property-taxes'],
+  ['car', 'Car costs', null, 'transportation.car-maintenance'],
+  ['medical', 'Medical & dental', 'medical', 'misc.medical'],
+  ['childcare', 'Childcare', 'childcare', 'misc.childcare'],
+  ['donations', 'Donations', 'donation', 'misc.donations'],
+  ['subscriptions', 'Subscriptions', null, 'communications.subscriptions'],
+  ['entertainment', 'Entertainment', null, 'recreation.other-entertainment'],
+  ['travel', 'Travel', null, 'recreation.travel-vacation'],
+  ['personalcare', 'Personal care', null, 'misc.personal-care'],
+  ['gifts', 'Gifts', null, 'misc.gifts'],
+  ['other', 'Other', null, 'misc.other']
+];
+
+// Institutions listed first in the card picker, by their id in the card list.
+const POPULAR_ISSUER_IDS = ['rbc', 'td', 'scotiabank', 'bmo', 'cibc', 'national-bank', 'desjardins', 'amex'];
+const BADGE_COLOURS = 12;                     // .ib-0 to .ib-11 in styles.css
 
 const SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
 const ICONS = {
@@ -492,14 +580,14 @@ function keepCorruptCopy(raw) {
   try { storageHandle().setItem(STORAGE_KEY + '.corrupt.' + Date.now(), raw); return true; } catch (e) { return false; }
 }
 
-// "Delete all" means all: unreadable copies and the old v1 key go too.
+// "Delete all" means all: unreadable copies, the old v1 key and the pre-groups backup go too.
 function removeLeftovers() {
   try {
     const ls = storageHandle();
     const doomed = [];
     for (let i = 0; i < ls.length; i++) {
       const k = ls.key(i);
-      if (k && (k.indexOf(STORAGE_KEY + '.corrupt.') === 0 || k.indexOf(LEGACY_KEY) === 0)) doomed.push(k);
+      if (k && (k.indexOf(STORAGE_KEY + '.corrupt.') === 0 || k.indexOf(LEGACY_KEY) === 0 || k === V2_BACKUP_KEY)) doomed.push(k);
     }
     doomed.forEach((k) => ls.removeItem(k));
   } catch (e) { /* nothing to do */ }
@@ -531,8 +619,8 @@ function saveState() {
 let state;
 
 function defaultCategories() {
-  return DEFAULT_CATEGORIES.map((c, i) => ({
-    id: c[0], emoji: c[1], name: c[2], taxTag: c[3], hidden: false, builtIn: true, order: i + 1
+  return DEFAULT_ITEMS.map((c, i) => ({
+    id: c[0] + '.' + slugOf(c[1]), groupId: c[0], name: c[1], emoji: c[2], taxTag: c[3], hidden: false, builtIn: true, order: i + 1
   }));
 }
 
@@ -542,7 +630,8 @@ function defaultSettings() {
     testNoticeDismissed: false,
     autoLocation: false,
     mapsNoticeShown: false,
-    onboarded: false
+    onboarded: false,
+    groupsNotice: false             // true until the one-time "categories were rearranged" notice has been seen
   };
 }
 
@@ -571,6 +660,44 @@ const MIGRATIONS = {
   }
 };
 
+// Version 2 to 3: the 20 flat categories become items in 8 budget groups. Every expense keeps
+// its amount, date and details; only its category id changes, by the table in OLD_CATEGORIES.
+MIGRATIONS[2] = (old) => {
+  const items = defaultCategories();
+  const byId = new Map(items.map((c) => [c.id, c]));
+  const table = new Map(OLD_CATEGORIES.map((o) => [o[0], o]));
+  const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const idMap = new Map(OLD_CATEGORIES.map((o) => [o[0], o[3]]));
+  const custom = [];
+  const oldCats = (Array.isArray(old.categories) ? old.categories : []).filter((c) => c && typeof c.id === 'string');
+  // Built-ins first: a hidden one stays hidden, a renamed one keeps the user's name, a changed tax tag is kept.
+  oldCats.forEach((raw) => {
+    const was = table.get(raw.id);
+    if (!was) return;
+    const item = byId.get(was[3]);
+    if (raw.hidden === true) item.hidden = true;
+    const tag = TAX_TAGS.indexOf(raw.taxTag) !== -1 ? raw.taxTag : null;
+    if (tag !== was[2]) item.taxTag = tag;
+    const name = typeof raw.name === 'string' ? raw.name.trim() : '';
+    if (name && name !== was[1] && !items.some((c) => c !== item && sameName(c.name, name))) item.name = name;
+  });
+  // The user's own categories move to Miscellaneous. One whose name is now a built-in item merges into it.
+  oldCats.forEach((raw) => {
+    if (table.has(raw.id) || typeof raw.name !== 'string' || !raw.name.trim()) return;
+    const twin = items.concat(custom).find((c) => sameName(c.name, raw.name));
+    if (twin) {
+      idMap.set(raw.id, twin.id);
+      if (!twin.taxTag && TAX_TAGS.indexOf(raw.taxTag) !== -1) twin.taxTag = raw.taxTag;
+      return;
+    }
+    custom.push(Object.assign({}, raw, { groupId: DEFAULT_GROUP, builtIn: false }));
+  });
+  const expenses = (Array.isArray(old.expenses) ? old.expenses : []).map((e) =>
+    (e && typeof e === 'object' && idMap.has(e.categoryId) ? Object.assign({}, e, { categoryId: idMap.get(e.categoryId) }) : e));
+  const settings = Object.assign({}, old.settings && typeof old.settings === 'object' ? old.settings : {}, { groupsNotice: expenses.length > 0 });
+  return { schemaVersion: 3, expenses, categories: items.concat(custom), cards: old.cards, settings };
+};
+
 function migrate(raw) {
   let data = raw;
   let version = Number.isInteger(data.schemaVersion) ? data.schemaVersion : 1;
@@ -582,6 +709,7 @@ function migrate(raw) {
   return version === SCHEMA_VERSION ? data : null;
 }
 
+const isGroupId = (id) => GROUPS.some((g) => g.id === id);
 const isPaymentId = (id) => PAYMENT_METHODS.some((p) => p.id === id);
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 const round5 = (n) => Math.round(n * 1e5) / 1e5;
@@ -598,9 +726,11 @@ function cleanCategories(list) {
     const known = byId.get(raw.id);
     if (known) {
       known.name = raw.name; known.emoji = emoji; known.taxTag = tag; known.hidden = raw.hidden === true;
+      if (isGroupId(raw.groupId)) known.groupId = raw.groupId;
     } else {
       order += 1;
-      const cat = { id: raw.id, name: raw.name, emoji, taxTag: tag, hidden: raw.hidden === true, builtIn: false, order };
+      const cat = { id: raw.id, groupId: isGroupId(raw.groupId) ? raw.groupId : DEFAULT_GROUP, name: raw.name, emoji, taxTag: tag,
+        hidden: raw.hidden === true, builtIn: false, order };
       cats.push(cat);
       byId.set(cat.id, cat);
     }
@@ -662,7 +792,7 @@ function cleanExpenses(list, cats, cards) {
       id: raw.id,
       amountCents: raw.amountCents,
       date: raw.date,
-      categoryId: ids.has(raw.categoryId) ? raw.categoryId : 'other',
+      categoryId: ids.has(raw.categoryId) ? raw.categoryId : FALLBACK_CATEGORY,
       paymentMethodId: isPaymentId(raw.paymentMethodId) ? raw.paymentMethodId : 'other',
       cardId: typeof raw.cardId === 'string' && cardIds.has(raw.cardId) ? raw.cardId : null,
       merchant: str(raw.merchant, 60),
@@ -694,7 +824,8 @@ function validateState(raw) {
       testNoticeDismissed: s.testNoticeDismissed === true,
       autoLocation: s.autoLocation === true,
       mapsNoticeShown: s.mapsNoticeShown === true,
-      onboarded: s.onboarded === true
+      onboarded: s.onboarded === true,
+      groupsNotice: s.groupsNotice === true
     }
   };
 }
@@ -709,10 +840,17 @@ function loadState() {
     fromLegacy = raw !== null;
   }
   if (raw === null) { state = defaultState(); return; }
-  let parsed = null;
+  let parsed = null, upgraded = false;
   try {
     const data = JSON.parse(raw);
-    if (data && typeof data === 'object' && !Array.isArray(data)) parsed = migrate(data);
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      upgraded = data.schemaVersion !== SCHEMA_VERSION;
+      // Before categories are regrouped, keep the version 2 state exactly as it was.
+      if (data.schemaVersion === 2 && !fromLegacy) {
+        try { storageHandle().setItem(V2_BACKUP_KEY, raw); } catch (e) { /* the migration still goes ahead */ }
+      }
+      parsed = migrate(data);
+    }
   } catch (e) { parsed = null; }
   if (!parsed) {
     store.corrupt = keepCorruptCopy(raw) ? 'kept' : 'lost';
@@ -721,15 +859,23 @@ function loadState() {
     return;
   }
   state = validateState(parsed);
-  if (fromLegacy) saveState();          // the old key is left untouched as a safety copy
+  if (fromLegacy || upgraded) saveState();   // the old v1 key is left untouched as a safety copy
 }
 
 const catById = (id) => state.categories.find((c) => c.id === id) ||
-  { id, name: 'Other', emoji: DEFAULT_EMOJI, taxTag: null, hidden: true, builtIn: false, order: 9999 };
+  { id, groupId: DEFAULT_GROUP, name: 'Other', emoji: DEFAULT_EMOJI, taxTag: null, hidden: true, builtIn: false, order: 9999 };
+const groupById = (id) => GROUPS.find((g) => g.id === id) || GROUPS.find((g) => g.id === DEFAULT_GROUP);
+const groupOfCat = (cat) => groupById(cat.groupId);
+// [{ group, items }] in group order, items in their own order; groups with nothing to show are left out.
+function itemsByGroup(includeHidden) {
+  return GROUPS.map((group) => ({
+    group,
+    items: state.categories.filter((c) => c.groupId === group.id && (includeHidden || !c.hidden)).sort((a, b) => a.order - b.order)
+  })).filter((g) => g.items.length);
+}
 const payById = (id) => PAYMENT_METHODS.find((p) => p.id === id) || PAYMENT_METHODS[PAYMENT_METHODS.length - 1];
 const sumCents = (list) => list.reduce((total, e) => total + e.amountCents, 0);
 const expensesInMonth = (m) => { const p = monthPrefix(m); return state.expenses.filter((e) => e.date.slice(0, 7) === p); };
-const byOrder = (a, b) => a.order - b.order;
 const newestFirst = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) ||
   (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0);
 
@@ -760,20 +906,17 @@ function restoreExpense(expense) {
   saveState();
 }
 
-// Seven most used visible categories over the last 90 days; ties keep default order.
+// Seven most used visible items over the last 90 days. Ties, and a new user's chips, follow
+// DEFAULT_CHIP_IDS first and then the item order.
 function rankTopCategories() {
   const since = daysAgoStr(90);
   const counts = new Map();
   state.expenses.forEach((e) => { if (e.date >= since) counts.set(e.categoryId, (counts.get(e.categoryId) || 0) + 1); });
+  const pref = (c) => { const i = DEFAULT_CHIP_IDS.indexOf(c.id); return i === -1 ? 1000 + c.order : i; };
   return state.categories
     .filter((c) => !c.hidden)
-    .sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0) || a.order - b.order)
+    .sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0) || pref(a) - pref(b))
     .slice(0, 7);
-}
-
-function visibleCategoriesAlpha() {
-  return state.categories.filter((c) => !c.hidden)
-    .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 }
 
 // Up to five earlier merchants: prefix matches, then contains matches, each by use count.
@@ -959,7 +1102,7 @@ function buildCsv() {
     const card = cardById(e.cardId);
     const loc = e.location;
     lines.push([
-      e.id, e.date, centsToPlain(e.amountCents), formulaSafe(cat.name), payById(e.paymentMethodId).label,
+      e.id, e.date, centsToPlain(e.amountCents), formulaSafe(groupOfCat(cat).name), formulaSafe(cat.name), payById(e.paymentMethodId).label,
       card ? formulaSafe(cardDisplayName(card)) : '', card ? card.last4 : '',
       formulaSafe(e.merchant), formulaSafe(e.note), cat.taxTag || '',
       loc ? loc.lat.toFixed(5) : '', loc ? loc.lng.toFixed(5) : '', loc && loc.accuracyM !== null ? String(loc.accuracyM) : '',
@@ -999,14 +1142,23 @@ function parseCsv(text) {
   return rows.filter((r) => !(r.length === 1 && r[0].trim() === ''));
 }
 
-function findCategoryByName(name) {
-  const key = name.toLowerCase();
-  return state.categories.find((c) => c.name.trim().toLowerCase() === key);
+// Finds the item a backup row means, trying in order: group plus name, name alone, then the
+// old default names of versions 0.1 and 0.2 ("Dining & coffee" is now Restaurant / Take-Out).
+function findCategoryForCsv(groupName, name) {
+  const key = name.trim().toLowerCase(), group = groupName.trim().toLowerCase();
+  const named = state.categories.filter((c) => c.name.trim().toLowerCase() === key);
+  if (group) {
+    const exact = named.find((c) => groupOfCat(c).name.toLowerCase() === group);
+    if (exact) return exact;
+  }
+  if (named.length) return named[0];
+  const old = OLD_CATEGORIES.find((o) => o[1].toLowerCase() === key);
+  return (old && state.categories.find((c) => c.id === old[3])) || null;
 }
 
-function createCategory(name, emoji, taxTag) {
+function createCategory(name, emoji, taxTag, groupId) {
   const order = state.categories.reduce((max, c) => Math.max(max, c.order), 0) + 1;
-  const cat = { id: 'c_' + newId(), name, emoji, taxTag, hidden: false, builtIn: false, order };
+  const cat = { id: 'c_' + newId(), groupId: isGroupId(groupId) ? groupId : DEFAULT_GROUP, name, emoji, taxTag, hidden: false, builtIn: false, order };
   state.categories.push(cat);
   return cat;
 }
@@ -1042,7 +1194,7 @@ function locationFromCsv(latText, lngText, accText, stamp) {
 
 const isoOrNull = (text) => (text && !Number.isNaN(Date.parse(text)) ? text : null);
 
-// Merges a backup (v1 or v2 columns) into the current state. Never overwrites an existing expense.
+// Merges a backup (v1, v2 or v3 columns) into the current state. Never overwrites an existing expense.
 function restoreCsv(text) {
   const rows = parseCsv(text);
   if (!rows.length) return { ok: false };
@@ -1061,10 +1213,13 @@ function restoreCsv(text) {
     if (!isValidYmd(date) || cents === null || !catName) { result.invalid += 1; return; }
     const id = cell(r, 'id').trim() || newId();
     if (ids.has(id)) { result.already += 1; return; }
-    let cat = findCategoryByName(catName);
+    let cat = findCategoryForCsv(formulaUnsafe(cell(r, 'category_group').trim()), catName);
     if (!cat) {
       const tag = cell(r, 'tax_tag').trim().toLowerCase();
-      cat = createCategory(catName, DEFAULT_EMOJI, TAX_TAGS.indexOf(tag) !== -1 ? tag : null);
+      // A new item goes to the group the backup names, or to Miscellaneous when it names none we know.
+      const groupName = formulaUnsafe(cell(r, 'category_group').trim()).trim().toLowerCase();
+      const group = GROUPS.find((g) => g.name.toLowerCase() === groupName);
+      cat = createCategory(catName, DEFAULT_EMOJI, TAX_TAGS.indexOf(tag) !== -1 ? tag : null, group ? group.id : DEFAULT_GROUP);
       result.newCategories += 1;
     }
     let methodId = paymentFromText(cell(r, 'payment_method'));
@@ -1118,6 +1273,8 @@ const ui = {
   corruptDismissed: false,
   downloads: null,            // platform capability when embedded
   canDownload: false,
+  summaryGroup: null,         // group opened inside Summary, or null for the overview
+  openGroups: new Set(),      // groups expanded in the By group list
   drawCharts: false,          // play the chart draw animation on the next Summary render
   chipIds: []                 // frozen chip order, see refreshChips()
 };
@@ -1335,6 +1492,7 @@ function render() {
 
 function switchTab(tab) {
   ui.tab = tab;
+  ui.summaryGroup = null;
   ui.drawCharts = tab === 'summary';
   render();
   el.view.scrollTop = 0;
@@ -1453,10 +1611,24 @@ function draftLocationHtml() {
    ===================================================================== */
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'];
 
-function chipHtml(cat, disabled) {
-  return `<button type="button" class="chip" data-act="chip" data-cat="${esc(cat.id)}" aria-disabled="${disabled}"
-    aria-label="${esc(STRINGS.chipLabel(cat.name))}">
-    <span class="chip-emoji" aria-hidden="true">${esc(cat.emoji)}</span><span class="chip-name">${esc(cat.name)}</span></button>`;
+// A chip shows the item's emoji and name. `caption` adds the group in small text, for chips
+// that could be mistaken for each other (see chipCaptions).
+function chipHtml(cat, disabled, caption) {
+  return `<button type="button" class="chip${caption ? ' has-caption' : ''}" data-act="chip" data-cat="${esc(cat.id)}" aria-disabled="${disabled}"
+    aria-label="${esc(STRINGS.chipLabel(caption ? cat.name + ', ' + caption : cat.name))}">
+    <span class="chip-emoji" aria-hidden="true">${esc(cat.emoji)}</span><span class="chip-name">${esc(cat.name)}</span>${
+    caption ? `<span class="chip-group">${esc(caption)}</span>` : ''}</button>`;
+}
+
+// Two visible chips can be confused when their names start with the same word but they sit in
+// different groups ("Gas / Diesel" and "Gas & Hydro"). Those chips get their group as a caption.
+function chipCaptions(cats) {
+  const first = (c) => fold(c.name).split(/[^a-z0-9]+/).filter(Boolean)[0] || '';
+  const out = new Map();
+  cats.forEach((c) => {
+    if (cats.some((o) => o !== c && o.groupId !== c.groupId && first(o) === first(c))) out.set(c.id, groupOfCat(c).name);
+  });
+  return out;
 }
 
 function detailsRowHtml() {
@@ -1481,7 +1653,8 @@ function refreshUsual() {
 
 VIEWS.add = function renderAdd() {
   const disabled = typedToCents(ui.amount) <= 0;
-  const chips = topCategories().map((c) => chipHtml(c, disabled)).join('') +
+  const top = topCategories(), captions = chipCaptions(top);
+  const chips = top.map((c) => chipHtml(c, disabled, captions.get(c.id))).join('') +
     `<button type="button" class="chip chip-more" data-act="chip-more" aria-disabled="${disabled}" aria-label="${esc(STRINGS.moreChipLabel)}">
        <span class="chip-emoji" aria-hidden="true">···</span><span class="chip-name">${esc(STRINGS.moreChip)}</span></button>`;
   const keys = KEYS.map((k) => {
@@ -1633,11 +1806,15 @@ function tagBadge(cat) {
   return cat.taxTag ? `<span class="badge">${esc(STRINGS.taxTags[cat.taxTag])}</span>` : '';
 }
 
+const groupHeadHtml = (group) =>
+  `<p class="group-head" data-group="${group.id}"><span aria-hidden="true">${esc(group.emoji)}</span> ${esc(group.name)}</p>`;
+
+// The More sheet: every visible item under its group heading.
 function openAllCategoriesSheet() {
-  const rows = visibleCategoriesAlpha().map((c) =>
+  const rows = itemsByGroup(false).map(({ group, items }) => groupHeadHtml(group) + items.map((c) =>
     `<button type="button" class="row" data-pick="${esc(c.id)}">
        <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
-       <span class="row-text"><span class="row-title">${esc(c.name)}</span></span>${tagBadge(c)}</button>`).join('');
+       <span class="row-text"><span class="row-title">${esc(c.name)}</span></span>${tagBadge(c)}</button>`).join('')).join('');
   const node = openSheet(STRINGS.allCategoriesTitle, `<div class="sheet-list" id="all-categories">${rows}</div>`);
   node.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-pick]');
@@ -1670,14 +1847,14 @@ function openRecentSheet() {
 
 // Payment picker for the Details sheet: the user's cards first, then the other ways to pay.
 function paymentPickerHtml(name, selected) {
-  const option = (value, label, colour) =>
+  const option = (value, label, card) =>
     `<label class="option"><input type="radio" name="${name}" value="${esc(value)}"${value === selected ? ' checked' : ''}>
-       <span>${colour ? `<i class="card-dot sw-${colour}" aria-hidden="true"></i>` : ''}${esc(label)}</span></label>`;
+       <span>${card ? cardBadgeHtml(card) : ''}${esc(label)}</span></label>`;
   const cards = activeCards();
   const others = PAYMENT_METHODS.map((p) => option(payValue(p.id, null), methodLabel(p.id), null)).join('');
   if (!cards.length) return `<div class="options" data-group="other">${others}</div>`;
   return `<p class="group-label">${esc(STRINGS.myCards)}</p>
-    <div class="options" data-group="cards">${cards.map((c) => option(payValue(c.kind, c.id), cardShortLabel(c), c.colour)).join('')}</div>
+    <div class="options" data-group="cards">${cards.map((c) => option(payValue(c.kind, c.id), cardShortLabel(c), c)).join('')}</div>
     <p class="group-label">${esc(STRINGS.otherWays)}</p>
     <div class="options" data-group="other">${others}</div>`;
 }
@@ -1759,7 +1936,7 @@ function monthSwitchHtml() {
 function historyRowHtml(e) {
   const cat = catById(e.categoryId);
   const card = cardById(e.cardId);
-  const sub = [e.merchant, e.note].filter(Boolean).join(STRINGS.sep);
+  const sub = [e.merchant, e.note].filter(Boolean).join(STRINGS.sep) || groupOfCat(cat).name;   // the group, where there is room
   const pay = card ? cardDisplayName(card) : payById(e.paymentMethodId).short;
   const pin = e.location ? `<span class="row-pin" role="img" aria-label="${esc(STRINGS.hasLocation)}">${esc(STRINGS.pin)}</span>` : '';
   return `<div class="swipe" data-id="${esc(e.id)}">
@@ -1792,7 +1969,14 @@ function filterChipsHtml(active) {
     `<button type="button" class="fchip" id="${id}" data-act="${act}" aria-pressed="${on}"${extra || ''}>${esc(label)}</button>`;
   let catLabel = STRINGS.filterCategory;
   if (f.cats.length === 1) catLabel = catById(f.cats[0]).name;
-  else if (f.cats.length > 1) catLabel = STRINGS.filterCategoryCount(f.cats.length);
+  else if (f.cats.length > 1) {
+    // a whole group, and nothing else, reads as the group's name
+    const whole = GROUPS.find((g) => {
+      const ids = state.categories.filter((c) => c.groupId === g.id).map((c) => c.id);
+      return ids.length === f.cats.length && ids.every((id) => f.cats.indexOf(id) !== -1);
+    });
+    catLabel = whole ? whole.name : STRINGS.filterCategoryCount(f.cats.length);
+  }
   let cardLabel = STRINGS.filterCard;
   if (f.card === NO_CARD) cardLabel = STRINGS.cashAndOther;
   else if (f.card !== null) { const card = cardById(f.card); cardLabel = card ? cardDisplayName(card) : STRINGS.filterCard; }
@@ -1873,20 +2057,36 @@ function clearFilters() {
   renderHistoryBody();
 }
 
+// Multi-select, grouped. Each group heading has a box that selects or clears the whole group.
 function openCategoryFilterSheet() {
   const picked = new Set(ui.filters.cats);
-  const rows = state.categories.slice().sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })).map((c) =>
-    `<label class="row check-row"><input type="checkbox" value="${esc(c.id)}"${picked.has(c.id) ? ' checked' : ''}>
-       <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
-       <span class="row-text"><span class="row-title">${esc(c.name + (c.hidden ? STRINGS.hiddenSuffix : ''))}</span></span></label>`).join('');
+  const rows = itemsByGroup(true).map(({ group, items }) =>
+    `<label class="row check-row group-check"><input type="checkbox" data-group="${group.id}" aria-label="${esc(STRINGS.filterWholeGroup(group.name))}">
+       <span class="row-text"><span class="row-title"><span aria-hidden="true">${esc(group.emoji)}</span> ${esc(group.name)}</span>
+         <span class="row-sub">${esc(STRINGS.filterWholeGroupHint)}</span></span></label>` +
+    items.map((c) =>
+      `<label class="row check-row item-check"><input type="checkbox" data-item="${group.id}" value="${esc(c.id)}"${picked.has(c.id) ? ' checked' : ''}>
+         <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
+         <span class="row-text"><span class="row-title">${esc(c.name + (c.hidden ? STRINGS.hiddenSuffix : ''))}</span></span></label>`).join('')).join('');
   const node = openSheet(STRINGS.filterCategoryTitle,
     `<div class="sheet-list" id="fc-list">${rows}</div>
      <div class="btn-row sticky-actions">
        <button type="button" class="btn" id="fc-none">${esc(STRINGS.clear)}</button>
        <button type="button" class="btn primary" id="fc-done">${esc(STRINGS.done)}</button>
      </div>`);
-  const apply = () => setFilter({ cats: $$('#fc-list input:checked', node).map((n) => n.value) });
-  $('#fc-list', node).addEventListener('change', apply);
+  const syncGroups = () => $$('#fc-list input[data-group]', node).forEach((box) => {
+    const items = $$(`#fc-list input[data-item="${box.dataset.group}"]`, node);
+    const on = items.filter((n) => n.checked).length;
+    box.checked = on > 0 && on === items.length;
+    box.indeterminate = on > 0 && on < items.length;
+  });
+  const apply = () => { syncGroups(); setFilter({ cats: $$('#fc-list input[data-item]:checked', node).map((n) => n.value) }); };
+  syncGroups();
+  $('#fc-list', node).addEventListener('change', (e) => {
+    const group = e.target.dataset.group;
+    if (group) $$(`#fc-list input[data-item="${group}"]`, node).forEach((n) => { n.checked = e.target.checked; });
+    apply();
+  });
   $('#fc-none', node).addEventListener('click', () => { $$('#fc-list input', node).forEach((n) => { n.checked = false; }); apply(); });
   $('#fc-done', node).addEventListener('click', closeSheet);
 }
@@ -2003,8 +2203,9 @@ document.addEventListener('pointercancel', (e) => {
 
 /* ----- Edit sheet ----- */
 function categoryOptionsHtml(selected) {
-  return state.categories.slice().sort(byOrder).map((c) =>
-    `<option value="${esc(c.id)}"${c.id === selected ? ' selected' : ''}>${esc(c.emoji + ' ' + c.name + (c.hidden ? STRINGS.hiddenSuffix : ''))}</option>`).join('');
+  return itemsByGroup(true).map(({ group, items }) =>
+    `<optgroup label="${esc(group.name)}">${items.map((c) =>
+      `<option value="${esc(c.id)}"${c.id === selected ? ' selected' : ''}>${esc(c.emoji + ' ' + c.name + (c.hidden ? STRINGS.hiddenSuffix : ''))}</option>`).join('')}</optgroup>`).join('');
 }
 
 // A native select with two groups. An archived card stays listed for the expense that uses it.
@@ -2158,7 +2359,7 @@ function openEditSheet(id) {
 }
 
 /* =====================================================================
-   16. View: Summary (charts you can tap, by category, by card, tax time)
+   16. View: Summary (group donut, group view, by group, by card, tax time)
    ===================================================================== */
 // Whole percentages that add up to exactly 100 (largest remainder method).
 function shares(amounts, total) {
@@ -2171,7 +2372,7 @@ function shares(amounts, total) {
   return out;
 }
 
-const DONUT = { size: 200, outer: 94, inner: 60, maxSlices: 8 };
+const DONUT = { size: 200, outer: 94, inner: 60 };
 
 function polar(radius, angle) {
   const c = DONUT.size / 2;
@@ -2185,29 +2386,21 @@ function ringSegment(a0, a1) {
   return `M${polar(R, a0)}A${R} ${R} 0 ${large} 1 ${polar(R, a1)}L${polar(r, a1)}A${r} ${r} 0 ${large} 0 ${polar(r, a0)}Z`;
 }
 
-// rows: [{ cat, cents }] sorted highest first. At most 8 slices: the top 7 plus "Other".
-function donutSlices(rows) {
-  const top = rows.slice(0, DONUT.maxSlices - 1), rest = rows.slice(DONUT.maxSlices - 1);
-  const slices = top.map((r) => ({ label: r.cat.name, ids: [r.cat.id], cents: r.cents }));
-  if (rest.length === 1) slices.push({ label: rest[0].cat.name, ids: [rest[0].cat.id], cents: rest[0].cents });
-  else if (rest.length > 1) slices.push({ label: STRINGS.otherSlice, ids: rest.map((r) => r.cat.id), cents: sumCents(rest.map((r) => ({ amountCents: r.cents }))) });
-  return slices;
-}
-
-function donutHtml(rows, total) {
-  const slices = donutSlices(rows);
-  const pcts = shares(slices.map((s) => s.cents), total);
+// One slice per group that has spending (at most 8). A group keeps its colour from month to month.
+// groups: [{ group, index, cents }] sorted highest first.
+function donutHtml(groups, total) {
+  const pcts = shares(groups.map((g) => g.cents), total);
   const start = -Math.PI / 2, full = Math.PI * 2;
   let done = 0;
-  const paths = slices.map((s, i) => {
+  const paths = groups.map((g, i) => {
     const a0 = start + (done / total) * full;
-    done += s.cents;
+    done += g.cents;
     const a1 = start + (done / total) * full;
     // A full circle cannot be drawn as one arc, so a lone slice is two halves.
-    const d = slices.length === 1 ? ringSegment(a0, a0 + Math.PI) + ringSegment(a0 + Math.PI, a0 + full) : ringSegment(a0, a1);
-    const label = STRINGS.sliceLabel(s.label, fmtMoney(s.cents), pcts[i]);
-    return `<path class="slice dc${i}" d="${d}" tabindex="0" role="button" data-act="filter-cats" data-cats="${esc(s.ids.join(','))}"
-      data-cents="${s.cents}" aria-label="${esc(label)}"><title>${esc(label)}</title></path>`;
+    const d = groups.length === 1 ? ringSegment(a0, a0 + Math.PI) + ringSegment(a0 + Math.PI, a0 + full) : ringSegment(a0, a1);
+    const label = STRINGS.sliceLabel(g.group.name, fmtMoney(g.cents), pcts[i]);
+    return `<path class="slice dc${g.index}" d="${d}" tabindex="0" role="button" data-act="open-group" data-group="${g.group.id}"
+      data-cents="${g.cents}" aria-label="${esc(label)}"><title>${esc(label)}</title></path>`;
   }).join('');
   const money = fmtMoney(total);
   const c = DONUT.size / 2;
@@ -2270,54 +2463,99 @@ function dailyBarsHtml(list) {
   return `<svg class="daily" id="daily-bars" viewBox="0 0 ${W} ${H + axis}" data-cap="${cap}" role="group" aria-label="${esc(STRINGS.dailyLabel)}">${bars}${ticks}</svg>`;
 }
 
-function shareRowsHtml(rows, total, act) {
+// Rows with amount, share and bar. `extra` is an optional class for the row.
+function shareRowsHtml(rows, total, act, extra) {
   const pcts = shares(rows.map((r) => r.cents), total);
   return rows.map((r, i) =>
-    `<button type="button" class="cat-row" data-act="${act}" data-ref="${esc(r.key)}" aria-label="${esc(STRINGS.sliceLabel(r.name, fmtMoney(r.cents), pcts[i]))}">
+    `<button type="button" class="cat-row${extra ? ' ' + extra : ''}" data-act="${act}" data-ref="${esc(r.key)}" aria-label="${esc(STRINGS.sliceLabel(r.name, fmtMoney(r.cents), pcts[i]))}">
        <span class="cat-line">${r.lead}<span class="name">${esc(r.name)}</span>
          <span class="amt">${esc(fmtMoney(r.cents))}</span><span class="pct">${pcts[i]}%</span></span>
        <span class="bar"><i style="width:${(r.cents * 100 / total).toFixed(2)}%"></i></span>
      </button>`).join('');
 }
 
+const emojiLead = (emoji) => `<span aria-hidden="true">${esc(emoji)}</span>`;
+const itemRowsOf = (g) => g.items.map((r) => ({ key: r.cat.id, name: r.cat.name, cents: r.cents, lead: emojiLead(r.cat.emoji) }));
+
+// The month's spending by group: [{ group, index, cents, items: [{ cat, cents }] }], highest first.
+function groupTotals(list) {
+  const perItem = new Map();
+  list.forEach((e) => perItem.set(e.categoryId, (perItem.get(e.categoryId) || 0) + e.amountCents));
+  return GROUPS.map((group, index) => {
+    const items = Array.from(perItem.entries()).map(([id, cents]) => ({ cat: catById(id), cents }))
+      .filter((r) => groupOfCat(r.cat).id === group.id)
+      .sort((a, b) => b.cents - a.cents || a.cat.order - b.cat.order);
+    return { group, index, items, cents: items.reduce((sum, r) => sum + r.cents, 0) };
+  }).filter((g) => g.cents > 0).sort((a, b) => b.cents - a.cents || a.index - b.index);
+}
+
+// One group, opened from the donut: its items with totals, shares of the group and bars.
+function groupViewHtml(groups, total) {
+  const group = groupById(ui.summaryGroup);
+  const g = groups.find((x) => x.group.id === group.id);
+  const head =
+    `<div class="card" id="group-view" data-group="${group.id}">
+       <button type="button" class="row plain row-action" id="group-back" data-act="close-group">${esc(STRINGS.allGroups)}</button>
+       <div class="month-total"><h2 class="group-name" id="group-name"><span aria-hidden="true">${esc(group.emoji)}</span> ${esc(group.name)}</h2>
+         <div class="big" id="group-total">${esc(fmtMoney(g ? g.cents : 0))}</div>
+         <div class="sub" id="group-share">${esc(g ? STRINGS.groupShare(Math.round(g.cents * 100 / total), monthLabel(ui.month)) : STRINGS.noExpenses(monthLabel(ui.month)))}</div></div>
+     </div>`;
+  if (!g) return head;
+  return head + `<div class="section-head"><span>${esc(STRINGS.groupItems(group.name))}</span></div>
+     <div class="card" id="group-items">${shareRowsHtml(itemRowsOf(g), g.cents, 'filter-cat')}</div>`;
+}
+
+// By group: one row per group, each opening to its items (shares are of the whole month).
+function byGroupHtml(groups, total) {
+  const pcts = shares(groups.map((g) => g.cents), total);
+  return groups.map((g, i) => {
+    const open = ui.openGroups.has(g.group.id);
+    const label = STRINGS.sliceLabel(g.group.name, fmtMoney(g.cents), pcts[i]);
+    return `<div class="grp" data-group="${g.group.id}">
+      <button type="button" class="cat-row grp-row" data-act="toggle-group" data-ref="${g.group.id}" aria-expanded="${open}" aria-label="${esc(label)}">
+        <span class="cat-line">${emojiLead(g.group.emoji)}<span class="name">${esc(g.group.name)}</span>
+          <span class="amt">${esc(fmtMoney(g.cents))}</span><span class="pct">${pcts[i]}%</span>${ICONS.chev}</span>
+        <span class="bar"><i style="width:${(g.cents * 100 / total).toFixed(2)}%"></i></span>
+      </button>
+      ${open ? `<div class="sub-rows">${shareRowsHtml(itemRowsOf(g), total, 'filter-cat', 'item-row')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 VIEWS.summary = function renderSummary() {
   const list = expensesInMonth(ui.month);
   const total = sumCents(list);
-  const perCat = new Map(), perCard = new Map();
+  const groups = groupTotals(list);
+  const perCard = new Map();
   list.forEach((e) => {
-    perCat.set(e.categoryId, (perCat.get(e.categoryId) || 0) + e.amountCents);
     const key = cardById(e.cardId) ? e.cardId : NO_CARD;
     perCard.set(key, (perCard.get(key) || 0) + e.amountCents);
   });
-  const rows = Array.from(perCat.entries())
-    .map(([id, cents]) => ({ cat: catById(id), cents }))
-    .sort((a, b) => b.cents - a.cents || a.cat.order - b.cat.order);
 
   let body;
-  if (!rows.length) {
+  if (ui.summaryGroup) {
+    body = groupViewHtml(groups, total);
+  } else if (!groups.length) {
     body = `<div class="empty"><p>${esc(STRINGS.noExpenses(monthLabel(ui.month)))}</p></div>`;
   } else {
-    const catRows = rows.map((r) => ({
-      key: r.cat.id, name: r.cat.name, cents: r.cents, lead: `<span aria-hidden="true">${esc(r.cat.emoji)}</span>`
-    }));
     const cardRows = Array.from(perCard.entries()).map(([key, cents]) => {
       const card = key === NO_CARD ? null : cardById(key);
       return {
         key, cents,
         name: card ? cardShortLabel(card) : STRINGS.cashAndOther,
-        lead: `<i class="card-dot sw-${card ? card.colour : 'none'}" aria-hidden="true"></i>`,
+        lead: card ? cardBadgeHtml(card) : '<i class="card-dot sw-none" aria-hidden="true"></i>',
         last: key === NO_CARD
       };
     }).sort((a, b) => (a.last - b.last) || b.cents - a.cents);
     body =
       `<div class="card charts${ui.drawCharts ? ' draw' : ''}" id="charts">
-         <div class="donut-wrap">${donutHtml(rows, total)}</div>
+         <div class="donut-wrap">${donutHtml(groups, total)}</div>
          <h2 class="chart-title">${esc(STRINGS.dailyTitle)}</h2>
          ${dailyBarsHtml(list)}
          <p class="footnote">${esc(STRINGS.chartHint)}</p>
        </div>
-       <div class="section-head"><span>${esc(STRINGS.byCategory)}</span></div>
-       <div class="card" id="by-category">${shareRowsHtml(catRows, total, 'filter-cat')}</div>
+       <div class="section-head"><span>${esc(STRINGS.byGroup)}</span></div>
+       <div class="card" id="by-group">${byGroupHtml(groups, total)}</div>
        ${state.cards.length ? `<div class="section-head"><span>${esc(STRINGS.byCard)}</span></div>
        <div class="card" id="by-card">${shareRowsHtml(cardRows, total, 'filter-card-row')}</div>` : ''}`;
   }
@@ -2328,11 +2566,11 @@ VIEWS.summary = function renderSummary() {
        <div class="month-total"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div>
          <div class="sub" id="summary-count">${esc(STRINGS.expenseCount(list.length))}</div></div>
        ${body}
-       <div class="card" id="tax-card">
+       ${ui.summaryGroup ? '' : `<div class="card" id="tax-card">
          <h2 class="card-title">${esc(STRINGS.taxTime(ui.month.y))}</h2>
          ${TAX_TAGS.map((tag) => `<div class="kv" data-tax="${tag}"><span>${esc(STRINGS.taxRows[tag])}</span><span class="v">${esc(fmtMoney(tax[tag]))}</span></div>`).join('')}
-         <p class="footnote">${esc(STRINGS.taxFootnote)}</p>
-       </div>
+         <p class="footnote" id="tax-footnote">${esc(STRINGS.taxFootnote)}</p>
+       </div>`}
      </div>`;
 };
 
@@ -2341,12 +2579,16 @@ VIEWS.summary = function renderSummary() {
    ===================================================================== */
 // The built-in Canadian card list: one of the site's own files, loaded when first needed
 // and kept offline by the service worker. Adding a card by hand works without it.
-const catalogue = { status: 'idle', cards: [], pending: null };
+const catalogue = { status: 'idle', cards: [], issuers: [], pending: null };
 
+// Returns { cards, issuers }. Issuers are A to Z (a leading "The" is ignored); each has the short
+// name for its badge and a colour index taken from its place in that order, so neighbours differ.
 function parseCatalogue(data) {
-  const issuers = new Map();
+  const known = new Map();
   (Array.isArray(data && data.issuers) ? data.issuers : []).forEach((i) => {
-    if (i && typeof i.id === 'string' && typeof i.name === 'string') issuers.set(i.id, i.name.trim());
+    if (!i || typeof i.id !== 'string' || typeof i.name !== 'string' || !i.name.trim()) return;
+    const short = typeof i.short === 'string' ? i.short.trim() : '';
+    known.set(i.id, { id: i.id, name: i.name.trim(), short: short.length >= 2 && short.length <= 6 ? short : '' });
   });
   const seen = new Set();
   const cards = [];
@@ -2354,9 +2596,11 @@ function parseCatalogue(data) {
     if (!c || typeof c.id !== 'string' || !c.id || seen.has(c.id)) return;
     if (typeof c.name !== 'string' || !c.name.trim() || CARD_KINDS.indexOf(c.kind) === -1) return;
     seen.add(c.id);
+    const issuer = known.get(c.issuerId);
     cards.push({
       id: c.id,
-      issuer: issuers.get(c.issuerId) || '',
+      issuerId: issuer ? issuer.id : '',
+      issuer: issuer ? issuer.name : '',
       name: c.name.trim().slice(0, 80),
       kind: c.kind,
       networks: (Array.isArray(c.networks) ? c.networks : []).filter((n) => CARD_NETWORKS.indexOf(n) !== -1)
@@ -2364,7 +2608,20 @@ function parseCatalogue(data) {
   });
   if (!cards.length) throw new Error('empty card list');
   const cmp = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' });
-  return cards.sort((a, b) => cmp(a.issuer, b.issuer) || cmp(a.name, b.name));
+  cards.sort((a, b) => cmp(a.issuer, b.issuer) || cmp(a.name, b.name));
+  const byName = new Map();
+  cards.forEach((c) => {
+    const name = c.issuer || STRINGS.otherIssuer;
+    if (!byName.has(name)) {
+      const info = known.get(c.issuerId);
+      byName.set(name, { id: c.issuerId, name, short: (info && info.short) || monogram(name), cards: [] });   // no short name: initials
+    }
+    byName.get(name).cards.push(c);
+  });
+  const key = (name) => fold(name).replace(/^the\s+/, '');
+  const issuers = Array.from(byName.values()).sort((a, b) => cmp(key(a.name), key(b.name)));
+  issuers.forEach((issuer, index) => { issuer.colour = index % BADGE_COLOURS; });
+  return { cards, issuers };
 }
 
 // Resolves true when the list is ready, false when it could not be loaded. Never rejects.
@@ -2380,7 +2637,7 @@ function loadCatalogue() {
     });
   } catch (e) { request = Promise.reject(e); }
   catalogue.pending = request
-    .then((data) => { catalogue.cards = parseCatalogue(data); catalogue.status = 'ok'; return true; })
+    .then((data) => { const list = parseCatalogue(data); catalogue.cards = list.cards; catalogue.issuers = list.issuers; catalogue.status = 'ok'; return true; })
     .catch(() => { catalogue.status = 'failed'; return false; })
     .then((ok) => { catalogue.pending = null; return ok; });
   return catalogue.pending;
@@ -2394,19 +2651,25 @@ function cardMetaLine(card) {
   return parts.filter((part, i) => parts.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === i).join(STRINGS.sep);
 }
 
-// Institutions in the card list, alphabetical (a leading "The" is ignored), each with its cards.
-function catalogueIssuers() {
-  const byName = new Map();
-  catalogue.cards.forEach((c) => {
-    const name = c.issuer || STRINGS.otherIssuer;
-    if (!byName.has(name)) byName.set(name, { name, cards: [] });
-    byName.get(name).cards.push(c);
-  });
-  const key = (name) => fold(name).replace(/^the\s+/, '');
-  return Array.from(byName.values()).sort((a, b) => key(a.name).localeCompare(key(b.name), 'en', { sensitivity: 'base' }));
+// Institution badge: short text on a rounded rectangle. The colour is one of 12 from the app's own
+// palette (null means neutral grey). Never a logo, never a bank's brand colour. The text is drawn
+// by CSS from data-t, so it is decoration and stays out of the row's readable text.
+const badgeHtml = (text, colour) =>
+  `<span class="ibadge ${colour === null ? 'ib-n' : 'ib-' + colour}" data-t="${esc(text)}" aria-hidden="true"></span>`;
+
+// A card from the list gets its institution's badge. A card added by hand gets initials on grey.
+function cardBadgeHtml(card) {
+  const issuer = card.catalogueId && catalogue.status === 'ok' ? catalogue.issuers.find((i) => i.name === card.issuer) : null;
+  return issuer ? badgeHtml(issuer.short, issuer.colour) : badgeHtml(monogram(card.issuer || card.name), null);
 }
 
-// One or two letters for the plain monogram tile (no logos): "RBC Royal Bank" gives RB,
+// Badges for the user's cards need the card list. It is loaded only when the user has such cards.
+function loadBadges() {
+  if (catalogue.status === 'ok' || !state.cards.some((c) => c.catalogueId)) return;
+  loadCatalogue().then((ok) => { if (ok && !sheet.node && ui.tab !== 'history') render(); });
+}
+
+// One or two letters where an institution has no short name, or a card was added by hand: "RBC Royal Bank" gives RB,
 // "American Express" gives AE, "Tangerine" gives T.
 function monogram(name) {
   const words = String(name).replace(/^the\s+/i, '').split(/[^0-9A-Za-zÀ-ɏ]+/).filter(Boolean);
@@ -2446,10 +2709,23 @@ function openAddCardSheet() {
       if (catalogue.status !== 'ok') { list.innerHTML = catalogueStatusHtml(); return; }
       const words = fold(pick.query).split(/\s+/).filter(Boolean);
       const hit = (text) => { const hay = fold(text); return words.every((w) => hay.indexOf(w) !== -1); };
-      const issuers = catalogueIssuers().filter((i) => hit(i.name));
-      let html = issuers.map((i) =>
-        `<button type="button" class="row" data-issuer="${esc(i.name)}"><span class="mono" aria-hidden="true">${esc(monogram(i.name))}</span>
-           <span class="row-text"><span class="row-title">${esc(i.name)}</span><span class="row-sub">${esc(STRINGS.cardCount(i.cards.length))}</span></span>${ICONS.chev}</button>`).join('');
+      const row = (i) =>
+        `<button type="button" class="row" data-issuer="${esc(i.name)}">${badgeHtml(i.short, i.colour)}
+           <span class="row-text"><span class="row-title">${esc(i.name)}</span><span class="row-sub">${esc(STRINGS.cardCount(i.cards.length))}</span></span>${ICONS.chev}</button>`;
+      const section = (id, title, rows) => (rows.length ? `<p class="group-head" id="${id}">${esc(title)}</p>` + rows.map(row).join('') : '');
+      const issuers = catalogue.issuers.filter((i) => hit(i.name));
+      let html;
+      if (words.length) {
+        html = issuers.map(row).join('');          // searching: one flat list of matches
+      } else {
+        // Your institutions, then the popular ones, then everything else A to Z.
+        const mine = new Set(state.cards.filter((c) => c.catalogueId && !c.archived).map((c) => c.issuer));
+        const yours = issuers.filter((i) => mine.has(i.name));
+        const popular = POPULAR_ISSUER_IDS.map((id) => issuers.find((i) => i.id === id)).filter((i) => i && !mine.has(i.name));
+        const rest = issuers.filter((i) => !mine.has(i.name) && popular.indexOf(i) === -1);
+        html = section('ac-yours', STRINGS.yourInstitutions, yours) + section('ac-popular', STRINGS.popularInstitutions, popular) +
+          section('ac-all', STRINGS.allInstitutions, rest);
+      }
       if (words.length) {
         const owned = ownedIds();
         const cards = catalogue.cards.filter((c) => hit(c.name));
@@ -2469,7 +2745,7 @@ function openAddCardSheet() {
       const row = e.target.closest('[data-issuer], [data-cat-id]');
       if (!row) return;
       if (row.dataset.issuer !== undefined) {
-        const issuer = catalogueIssuers().find((i) => i.name === row.dataset.issuer);
+        const issuer = catalogue.issuers.find((i) => i.name === row.dataset.issuer);
         if (issuer) openIssuer(issuer);
       } else {
         const item = catalogue.cards.find((c) => c.id === row.dataset.catId);
@@ -2658,17 +2934,17 @@ VIEWS.profile = function renderProfile() {
   const cardText = (c) => `<span class="row-text"><span class="row-title">${esc(cardDisplayName(c))}</span><span class="row-sub">${esc(cardMetaLine(c))}</span></span>`;
   const active = activeCards(), archived = archivedCards();
   const tiles = active.map((c) =>
-    `<button type="button" class="row card-tile" data-act="card-edit" data-id="${esc(c.id)}">${swatch(c)}${cardText(c)}${ICONS.chev}</button>`).join('');
+    `<button type="button" class="row card-tile" data-act="card-edit" data-id="${esc(c.id)}">${swatch(c)}${cardBadgeHtml(c)}${cardText(c)}${ICONS.chev}</button>`).join('');
   const archivedHtml = !archived.length ? '' :
     `<div class="section-head"><span>${esc(STRINGS.archived)}</span></div>
      <div class="card" id="archived-cards">${archived.map((c) =>
-       `<div class="row card-tile archived" data-id="${esc(c.id)}">${swatch(c)}${cardText(c)}
+       `<div class="row card-tile archived" data-id="${esc(c.id)}">${swatch(c)}${cardBadgeHtml(c)}${cardText(c)}
           <button type="button" class="btn small" data-act="card-restore" data-id="${esc(c.id)}" aria-label="${esc(STRINGS.restoreCardLabel(cardDisplayName(c)))}">${esc(STRINGS.restoreCard)}</button></div>`).join('')}</div>`;
-  const cats = state.categories.slice().sort(byOrder).map((c) =>
+  const cats = itemsByGroup(true).map(({ group, items }) => groupHeadHtml(group) + items.map((c) =>
     `<button type="button" class="row" data-act="cat-edit" data-id="${esc(c.id)}">
        <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
        <span class="row-text"><span class="row-title">${esc(c.name)}</span></span>
-       ${tagBadge(c)}${c.hidden ? `<span class="badge muted">${esc(STRINGS.hidden)}</span>` : ''}${ICONS.chev}</button>`).join('');
+       ${tagBadge(c)}${c.hidden ? `<span class="badge muted">${esc(STRINGS.hidden)}</span>` : ''}${ICONS.chev}</button>`).join('')).join('');
   el.view.innerHTML =
     `<div class="page">
        <div class="section-head"><span>${esc(STRINGS.myCards)}</span></div>
@@ -2859,7 +3135,10 @@ function openCategorySheet(id) {
   const custom = cat && !cat.builtIn;
   const node = openSheet(cat ? STRINGS.editCategory : STRINGS.addCategory,
     `<label class="field"><span class="label">${esc(STRINGS.catName)}</span>
-       <input class="input" type="text" id="c-name" maxlength="24" autocomplete="off" autocapitalize="sentences" value="${esc(cat ? cat.name : '')}"></label>
+       <input class="input" type="text" id="c-name" maxlength="${CAT_NAME_MAX}" autocomplete="off" autocapitalize="sentences" value="${esc(cat ? cat.name : '')}"></label>
+     <label class="field"><span class="label">${esc(STRINGS.catGroup)}</span>
+       <select class="input" id="c-group">${GROUPS.map((g) =>
+         `<option value="${g.id}"${g.id === (cat ? cat.groupId : DEFAULT_GROUP) ? ' selected' : ''}>${esc(g.emoji + ' ' + g.name)}</option>`).join('')}</select></label>
      <label class="field"><span class="label">${esc(STRINGS.catEmoji)}</span>
        <input class="input" type="text" id="c-emoji" maxlength="16" autocomplete="off" value="${esc(cat ? cat.emoji : DEFAULT_EMOJI)}"></label>
      <fieldset class="field"><legend>${esc(STRINGS.catTaxTag)}</legend><div class="options" id="c-tags">${tagOptions}</div></fieldset>
@@ -2896,7 +3175,8 @@ function openCategorySheet(id) {
     });
   }
   $('#c-save', node).addEventListener('click', () => {
-    const name = $('#c-name', node).value.trim().slice(0, 24);
+    const name = $('#c-name', node).value.trim().slice(0, CAT_NAME_MAX);
+    const groupId = $('#c-group', node).value;
     const emoji = $('#c-emoji', node).value.trim() || DEFAULT_EMOJI;
     const picked = $('input[name="c-tag"]:checked', node);
     const taxTag = picked && picked.value !== 'none' ? picked.value : null;
@@ -2907,8 +3187,9 @@ function openCategorySheet(id) {
     if (error) return;
     if (cat) {
       cat.name = name; cat.emoji = emoji; cat.taxTag = taxTag; cat.hidden = $('#c-hidden', node).checked;
+      if (isGroupId(groupId)) cat.groupId = groupId;
     } else {
-      createCategory(name, emoji, taxTag);
+      createCategory(name, emoji, taxTag, groupId);
     }
     saveState();
     refreshChips();
@@ -2950,6 +3231,14 @@ function openDeleteAllSheet() {
 /* =====================================================================
    19. First-run setup (two steps; can be skipped at either)
    ===================================================================== */
+// Shown once, the first time the app opens after categories were moved into budget groups.
+function openGroupsNotice() {
+  openSheet(STRINGS.groupsNoticeTitle,
+    `<p class="ob-lead" id="mig-text">${esc(STRINGS.groupsNotice)}</p>
+     <button type="button" class="btn primary block" id="mig-ok" data-sheet-close>${esc(STRINGS.ok)}</button>`,
+    { onClose: () => { state.settings.groupsNotice = false; saveState(); } });
+}
+
 function openWelcome() {
   let step = 1;
   // However the sheet goes away (Skip, Done, ×, backdrop, Escape), setup is not shown again.
@@ -3052,8 +3341,11 @@ const ACTIONS = {
   'filter-day-clear': () => setFilter({ day: null }),
   'filter-month-clear': () => setFilter({ month: null }),
   'filter-clear': clearFilters,
-  // Summary taps: History with that filter, for the month on screen (a day needs no month).
-  'filter-cats': (t) => openHistoryFiltered({ cats: t.dataset.cats.split(',').filter(Boolean), month: monthCopy() }),
+  // Summary: a donut slice opens its group inside Summary; a By group row opens in place.
+  'open-group': (t) => { ui.summaryGroup = t.dataset.group; VIEWS.summary(); el.view.scrollTop = 0; },
+  'close-group': () => { ui.summaryGroup = null; VIEWS.summary(); el.view.scrollTop = 0; },
+  'toggle-group': (t) => { const id = t.dataset.ref; if (ui.openGroups.has(id)) ui.openGroups.delete(id); else ui.openGroups.add(id); VIEWS.summary(); },
+  // Summary taps on an item, card or day: History with that filter, for the month on screen (a day needs no month).
   'filter-cat': (t) => openHistoryFiltered({ cats: [t.dataset.ref], month: monthCopy() }),
   'filter-card-row': (t) => openHistoryFiltered({ card: t.dataset.ref, month: monthCopy() }),
   'filter-day': (t) => openHistoryFiltered({ day: t.dataset.day }),
@@ -3117,6 +3409,7 @@ window.addEventListener('storage', (e) => {
   if (ui.draft.cardId && !cardById(ui.draft.cardId)) ui.draft.cardId = null;
   if (ui.filters.card && ui.filters.card !== NO_CARD && !cardById(ui.filters.card)) ui.filters.card = null;
   render();
+  loadBadges();
 });
 
 // Keep "Today" correct when the app is reopened on a later day, and look for a new version.
@@ -3138,7 +3431,9 @@ setKeyboardOverlap(0);
 render();
 probeDownloads().then(() => { if (ui.tab === 'profile' && !sheet.node) { const b = $('#btn-download'); if (b) b.hidden = !ui.canDownload; } });
 registerServiceWorker();
-// First launch with nothing saved yet: the two-step welcome.
-if (!state.settings.onboarded && state.expenses.length === 0) openWelcome();
+loadBadges();
+// After the move to budget groups: say so, once. Otherwise, first launch with nothing saved: the two-step welcome.
+if (state.settings.groupsNotice) openGroupsNotice();
+else if (!state.settings.onboarded && state.expenses.length === 0) openWelcome();
 
 })();

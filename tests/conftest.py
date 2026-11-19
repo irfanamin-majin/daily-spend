@@ -7,6 +7,7 @@ opened from a subpath (http://127.0.0.1:PORT/<folder>/), the way GitHub Pages se
 import datetime
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -62,11 +63,12 @@ def browser():
 
 
 # Maple Bank has credit, debit and prepaid cards; American Express has credit cards only;
-# The Northern Trust has one debit card (and sorts under N); one card has an unknown kind.
+# The Northern Trust has one debit card, sorts under N and has no short name (its badge falls back
+# to initials); American Express has the id of a popular institution; one card has an unknown kind.
 FIXTURE_CARDS = {
     "version": "test", "lastChecked": "2026-11-15",
-    "issuers": [{"id": "maple", "name": "Maple Bank"}, {"id": "prairie", "name": "Prairie Credit Union"},
-                {"id": "amex", "name": "American Express"}, {"id": "northern", "name": "The Northern Trust"}],
+    "issuers": [{"id": "maple", "name": "Maple Bank", "short": "Maple"}, {"id": "prairie", "name": "Prairie Credit Union", "short": "PCU"},
+                {"id": "amex", "name": "American Express", "short": "Amex"}, {"id": "northern", "name": "The Northern Trust"}],
     "cards": [
         {"id": "maple-rewards-visa", "issuerId": "maple", "name": "Maple Rewards Visa", "kind": "credit", "networks": ["Visa"], "extra": 1},
         {"id": "maple-travel-mc", "issuerId": "maple", "name": "Maple Travel World Mastercard", "kind": "credit", "networks": ["Mastercard"]},
@@ -138,6 +140,8 @@ class App:
         self.ui.locator("#amount").wait_for()
         if self.skip_welcome and self.ui.locator("#ob-skip").count():
             self.ui.locator("#ob-skip").click()
+        if self.skip_welcome and self.ui.locator("#mig-ok").count():      # the one-time "categories updated" notice
+            self.ui.locator("#mig-ok").click()
 
     def reload(self):
         self.page.reload()
@@ -221,7 +225,38 @@ def cents(text):
     return int(whole) * 100 + int((frac + "00")[:2])
 
 
-DEFAULT_CATS = [
+GROUPS = [("housing", "Housing"), ("debt", "Debt Payments"), ("communications", "Communications"), ("food", "Food"),
+          ("transportation", "Transportation"), ("recreation", "Recreation"), ("misc", "Miscellaneous"), ("insurance", "Insurance")]
+# (group id, name, emoji, tax tag): the 45 built-in items of version 0.2.2, in order
+ITEMS = [
+    ("housing", "Mortgage / Rent", "🏠", None), ("housing", "Property Taxes", "🏛️", None), ("housing", "Water & Sewage", "🚰", None),
+    ("housing", "Gas & Hydro", "💡", None), ("housing", "Property / Tenant Insurance", "🛡️", None), ("housing", "Home maintenance", "🔧", None),
+    ("housing", "Condo fees", "🏢", None), ("housing", "Other housing", "🏠", None),
+    ("debt", "Card interest & fees", "💳", None), ("debt", "Line of Credit", "🏦", None), ("debt", "Personal Loan", "🤝", None),
+    ("debt", "Student Loan", "🎓", None), ("debt", "Other debt", "💳", None),
+    ("communications", "Cell / Telephone", "📱", None), ("communications", "Television", "📺", None),
+    ("communications", "Internet", "🌐", None), ("communications", "Subscriptions", "🔁", None),
+    ("food", "Groceries", "🛒", None), ("food", "Restaurant / Take-Out", "🍔", None),
+    ("transportation", "Car Loan / Lease Payments", "🚗", None), ("transportation", "Car Insurance", "🛡️", None),
+    ("transportation", "Gas / Diesel", "⛽", None), ("transportation", "Car maintenance", "🔧", None),
+    ("transportation", "Parking", "🅿️", None), ("transportation", "Transit", "🚇", None),
+    ("recreation", "Travel / Vacation", "✈️", None), ("recreation", "Concerts / Sport Events", "🎟️", None),
+    ("recreation", "Club Memberships", "🏋️", None), ("recreation", "Other Entertainment", "🎮", None),
+    ("misc", "Education", "📚", None), ("misc", "Medical", "🩺", "medical"), ("misc", "Clothing", "👕", None), ("misc", "Gifts", "🎁", None),
+    ("misc", "Donations", "🎗️", "donation"), ("misc", "Childcare", "🧸", "childcare"), ("misc", "Shopping", "🛍️", None),
+    ("misc", "Personal Care", "💇", None), ("misc", "Pets", "🐾", None), ("misc", "Fees", "🧾", None), ("misc", "Other", "📦", None),
+    ("insurance", "Life Insurance", "❤️", None), ("insurance", "Disability Insurance", "♿", None),
+    ("insurance", "Critical Illness Insurance", "🏥", None), ("insurance", "Health / Dental Insurance", "🦷", "medical"),
+    ("insurance", "Other insurance", "🛡️", None),
+]
+
+
+def item_id(group, name):
+    return group + "." + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+# The 20 categories of versions 0.1 and 0.2: (old id, emoji, old name, tax tag), and where each one went.
+OLD_CATS = [
     ("groceries", "🛒", "Groceries", None), ("dining", "☕", "Dining & coffee", None),
     ("gas", "⛽", "Gas & parking", None), ("transit", "🚇", "Transit", None),
     ("shopping", "🛍️", "Shopping", None), ("phone", "📱", "Phone & internet", None),
@@ -233,19 +268,37 @@ DEFAULT_CATS = [
     ("travel", "✈️", "Travel", None), ("personalcare", "💇", "Personal care", None),
     ("gifts", "🎁", "Gifts", None), ("other", "📦", "Other", None),
 ]
+CAT = {
+    "groceries": "food.groceries", "dining": "food.restaurant-take-out", "gas": "transportation.gas-diesel",
+    "transit": "transportation.transit", "shopping": "misc.shopping", "phone": "communications.cell-telephone",
+    "utilities": "housing.gas-hydro", "housing": "housing.mortgage-rent", "condo": "housing.condo-fees",
+    "propertytax": "housing.property-taxes", "car": "transportation.car-maintenance", "medical": "misc.medical",
+    "childcare": "misc.childcare", "donations": "misc.donations", "subscriptions": "communications.subscriptions",
+    "entertainment": "recreation.other-entertainment", "travel": "recreation.travel-vacation",
+    "personalcare": "misc.personal-care", "gifts": "misc.gifts", "other": "misc.other",
+}
 
 
 def make_cats():
+    return [{"id": item_id(c[0], c[1]), "groupId": c[0], "name": c[1], "emoji": c[2], "taxTag": c[3], "hidden": False,
+             "builtIn": True, "order": i + 1} for i, c in enumerate(ITEMS)]
+
+
+def make_old_cats():
     return [{"id": c[0], "emoji": c[1], "name": c[2], "taxTag": c[3], "hidden": False,
-             "builtIn": True, "order": i + 1} for i, c in enumerate(DEFAULT_CATS)]
+             "builtIn": True, "order": i + 1} for i, c in enumerate(OLD_CATS)]
 
 
-def make_expenses(rows):
-    """rows: (date, cents, categoryId, paymentId, merchant, note[, cardId[, location]])"""
+def make_expenses(rows, old_ids=False):
+    """rows: (date, cents, categoryId, paymentId, merchant, note[, cardId[, location]])
+
+    Rows may name a category by its short pre-0.2.2 id ("groceries"); it is stored as the new
+    item id ("food.groceries") unless old_ids is set.
+    """
     out = []
     for i, r in enumerate(rows):
         stamp = f"{r[0]}T{8 + i % 12:02d}:{i % 60:02d}:00.000Z"
-        out.append({"id": f"seed-{i:03d}", "date": r[0], "amountCents": r[1], "categoryId": r[2],
+        out.append({"id": f"seed-{i:03d}", "date": r[0], "amountCents": r[1], "categoryId": r[2] if old_ids else CAT.get(r[2], r[2]),
                     "paymentMethodId": r[3], "cardId": r[6] if len(r) > 6 else None,
                     "merchant": r[4], "note": r[5], "location": r[7] if len(r) > 7 else None,
                     "createdAt": stamp, "updatedAt": stamp})
@@ -260,19 +313,26 @@ def make_card(card_id, name, kind="credit", issuer="Maple Bank", networks=("Visa
 
 
 def make_state(rows, test_notice_dismissed=False, cards=(), onboarded=True, auto_location=False):
-    """A schema 2 state, as the app stores it."""
-    return {"schemaVersion": 2, "expenses": make_expenses(rows), "categories": make_cats(), "cards": list(cards),
+    """A schema 3 state, as the app stores it."""
+    return {"schemaVersion": 3, "expenses": make_expenses(rows), "categories": make_cats(), "cards": list(cards),
             "settings": {"lastPayment": {"methodId": "credit", "cardId": None},
                          "testNoticeDismissed": test_notice_dismissed, "autoLocation": auto_location,
-                         "mapsNoticeShown": False, "onboarded": onboarded}}
+                         "mapsNoticeShown": False, "onboarded": onboarded, "groupsNotice": False}}
+
+
+def make_v2_state(rows, cards=(), onboarded=True):
+    """A schema 2 state, as version 0.2.0 and 0.2.1 stored it: 20 flat categories, old ids."""
+    return {"schemaVersion": 2, "expenses": make_expenses(rows, old_ids=True), "categories": make_old_cats(), "cards": list(cards),
+            "settings": {"lastPayment": {"methodId": "credit", "cardId": None}, "testNoticeDismissed": False,
+                         "autoLocation": False, "mapsNoticeShown": False, "onboarded": onboarded}}
 
 
 def make_v1_state(rows, last_payment="credit"):
     """A schema 1 state, as the v1 test page stored it under dailyspend.v1."""
-    expenses = make_expenses(rows)
+    expenses = make_expenses(rows, old_ids=True)
     for e in expenses:
         del e["cardId"], e["location"]
-    return {"schemaVersion": 1, "expenses": expenses, "categories": make_cats(),
+    return {"schemaVersion": 1, "expenses": expenses, "categories": make_old_cats(),
             "settings": {"lastPaymentMethodId": last_payment, "testNoticeDismissed": True}}
 
 

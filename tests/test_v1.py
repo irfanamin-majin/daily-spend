@@ -26,7 +26,7 @@ def site_only(app, urls):
     return set(urls) <= allowed and (core <= set(urls) or len(urls) == 1)
 
 
-HEADER = ("id,date,amount,category,payment_method,card,card_last4,merchant,note,tax_tag,"
+HEADER = ("id,date,amount,category_group,category,payment_method,card,card_last4,merchant,note,tax_tag,"
           "latitude,longitude,location_accuracy_m,created_at,updated_at")
 COL = {name: i for i, name in enumerate(HEADER.split(","))}
 CAPTURE_CLIPBOARD = """
@@ -68,8 +68,8 @@ def test_01_first_load(app):
     chips = app.ui.locator("#chips .chip")
     assert chips.count() == 8
     names = app.ui.locator("#chips .chip-name").all_inner_texts()
-    assert names == ["Groceries", "Dining & coffee", "Gas & parking", "Transit", "Shopping",
-                     "Phone & internet", "Hydro & utilities", "More"]
+    assert names == ["Groceries", "Restaurant / Take-Out", "Gas / Diesel", "Shopping", "Transit",
+                     "Personal Care", "Medical", "More"]
     for i in range(8):
         assert chips.nth(i).is_visible()
     assert app.ui.locator("#keypad .key").count() == 12
@@ -92,7 +92,7 @@ def test_02_add_expense(app):
     assert len(ex) == 1
     e = ex[0]
     assert e["amountCents"] == 1234 and isinstance(e["amountCents"], int)
-    assert e["categoryId"] == "groceries" and e["date"] == "2026-11-15"
+    assert e["categoryId"] == "food.groceries" and e["date"] == "2026-11-15"
     assert e["paymentMethodId"] == "credit" and e["merchant"] == "" and e["note"] == ""
     assert app.amount() == "$0"
 
@@ -203,8 +203,8 @@ def test_06_details_sheet(app):
     assert "Yesterday · Cash" in row.inner_text()
     assert "Tim Hortons · Double double" in row.inner_text()
 
-    app.add("2.25", "Dining & coffee")
-    assert app.toast().inner_text() == "Saved $2.25 · Dining & coffee · Yesterday"
+    app.add("2.25", "Restaurant / Take-Out")
+    assert app.toast().inner_text() == "Saved $2.25 · Restaurant / Take-Out · Yesterday"
     e = app.expenses()[0]
     assert e["date"] == "2026-11-14" and e["paymentMethodId"] == "cash"
     assert e["merchant"] == "Tim Hortons" and e["note"] == "Double double"
@@ -291,7 +291,7 @@ def test_07_history(app):
     app.ui.locator('.row[data-id="seed-002"]').click()
     assert app.ui.locator("#e-amount").get_attribute("inputmode") == "decimal"
     assert app.ui.locator("#e-amount").input_value() == "62.30"
-    assert app.ui.locator("#e-category option").count() == 20
+    assert app.ui.locator("#e-category option").count() == 45 and app.ui.locator("#e-category optgroup").count() == 8
     app.ui.locator("#e-amount").fill("70.129")       # third decimal dropped by the keypad rules
     assert app.ui.locator("#e-amount").input_value() == "70.12"
     app.ui.locator("#e-amount").fill("0")
@@ -340,16 +340,21 @@ def test_08_summary(app):
     assert cents(app.ui.locator("#summary-total").inner_text()) == history_total == sum(r[1] for r in nov)
     assert app.ui.locator("#summary-count").inner_text() == f"{len(nov)} expenses"
 
-    amounts = [cents(t) for t in app.ui.locator("#by-category .amt").all_inner_texts()]
+    # v2.2: the list is by group; each group opens to its items
+    amounts = [cents(t) for t in app.ui.locator("#by-group .grp-row .amt").all_inner_texts()]
     assert amounts == sorted(amounts, reverse=True)
     assert sum(amounts) == history_total
-    pcts = [int(t.rstrip("%")) for t in app.ui.locator("#by-category .pct").all_inner_texts()]
-    assert 99 <= sum(pcts) <= 101
-    names = app.ui.locator("#by-category .name").all_inner_texts()
-    assert names[0] == "Rent or mortgage"
-    groceries = amounts[names.index("Groceries")]
-    assert groceries == 8412 + 9575
-    assert app.ui.locator("#by-category .bar").count() == len(names)
+    pcts = [int(t.rstrip("%")) for t in app.ui.locator("#by-group .grp-row .pct").all_inner_texts()]
+    assert sum(pcts) == 100
+    names = app.ui.locator("#by-group .grp-row .name").all_inner_texts()
+    assert names[0] == "Housing"
+    assert amounts[names.index("Food")] == 8412 + 9575 + 475 + 3899
+    assert app.ui.locator("#by-group .grp-row .bar").count() == len(names)
+    app.ui.locator('#by-group .grp-row:has-text("Food")').click()
+    items = dict(zip(app.ui.locator("#by-group .item-row .name").all_inner_texts(),
+                     [cents(t) for t in app.ui.locator("#by-group .item-row .amt").all_inner_texts()]))
+    assert items == {"Groceries": 8412 + 9575, "Restaurant / Take-Out": 475 + 3899}
+    app.ui.locator('#by-group .grp-row:has-text("Food")').click()
 
     card = app.ui.locator("#tax-card")
     assert card.locator(".card-title").inner_text() == "Tax time 2026"
@@ -357,7 +362,7 @@ def test_08_summary(app):
     assert cents(card.locator('[data-tax="medical"] .v').inner_text()) == sum(r[1] for r in y if r[2] == "medical") == 28400
     assert cents(card.locator('[data-tax="donation"] .v').inner_text()) == sum(r[1] for r in y if r[2] == "donations") == 7150
     assert cents(card.locator('[data-tax="childcare"] .v').inner_text()) == 42000
-    assert "Totals of expenses in tagged categories. Eligibility rules apply." in card.inner_text()
+    assert "Totals of tagged categories. Only private health plan premiums count; provincial plan premiums don't." in card.inner_text()
 
     # previous year card
     for _ in range(11):
@@ -371,7 +376,7 @@ TRICKY = [
     ("2026-11-02", 123450, "groceries", "debit", 'Joe\'s "Fresh" Market, Inc.', "line one\nline two, with comma"),
     ("2026-11-03", 999, "dining", "cash", "=SUM(A1:A9)", "+1 403 555 0100"),
     ("2026-11-03", 1, "gas", "pad", "-minus", "@handle"),
-    ("2026-11-01", 9999999, "medical", "etransfer", "Plain", "Café ☕ naïve"),
+    ("2026-11-01", 9999999, "medical", "etransfer", "Plain", "Café 🍔 naïve"),
 ]
 
 
@@ -396,7 +401,7 @@ def test_09_csv_export(make_app):
     assert [r[1] for r in body] == ["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-03"]  # date, then createdAt
     assert [r[2] for r in body] == ["99999.99", "1234.50", "9.99", "0.01"]
     M, N, T, P = COL["merchant"], COL["note"], COL["tax_tag"], COL["payment_method"]
-    assert [body[0][i] for i in (3, P, M, N, T)] == ["Medical & dental", "e-Transfer (Interac)", "Plain", "Café ☕ naïve", "medical"]
+    assert [body[0][i] for i in (COL["category"], P, M, N, T)] == ["Medical", "e-Transfer (Interac)", "Plain", "Café 🍔 naïve", "medical"]
     assert body[0][COL["card"]] == "" and body[0][COL["latitude"]] == "" and len(body[0]) == len(COL)
     assert body[1][M] == 'Joe\'s "Fresh" Market, Inc.'
     assert body[1][N] == "line one\nline two, with comma"
@@ -462,7 +467,7 @@ def test_10_restore(make_app):
     dst.ui.locator("#r-result").filter(has_text="Skipped 11").wait_for()
     assert dst.ui.locator("#r-result").inner_text() == "Restored 0 expenses. Skipped 11 already here and 0 invalid rows."
     assert len(dst.expenses()) == 11
-    assert len(dst.state()["categories"]) == 21
+    assert len(dst.state()["categories"]) == 46
 
     # invalid rows are counted; LF endings, shuffled columns, missing optional columns
     mixed = "\n".join([
@@ -487,7 +492,7 @@ def test_10_restore(make_app):
     new = {e["merchant"]: e for e in st["expenses"] if e["merchant"] in ("Ok one", "=Quoted, name", "Case")}
     assert new["Ok one"]["paymentMethodId"] == "cash" and new["Ok one"]["amountCents"] == 1000
     assert new["=Quoted, name"]["paymentMethodId"] == "debit" and new["=Quoted, name"]["categoryId"] == pet["id"]
-    assert new["Case"]["paymentMethodId"] == "other" and new["Case"]["categoryId"] == "groceries"
+    assert new["Case"]["paymentMethodId"] == "other" and new["Case"]["categoryId"] == "food.groceries"
     assert all(e["id"] for e in st["expenses"]) and len({e["id"] for e in st["expenses"]}) == 14
 
     # not a backup at all
@@ -503,7 +508,7 @@ def test_11_categories(app):
     app.tab("profile")
     app.ui.locator("#btn-add-category").click()
     assert app.ui.locator("#c-emoji").input_value() == "📦"
-    assert app.ui.locator("#c-name").get_attribute("maxlength") == "24"
+    assert app.ui.locator("#c-name").get_attribute("maxlength") == "32"
     app.ui.locator("#c-save").click()
     assert app.ui.locator("#c-error").inner_text() == "Enter a name."
     app.ui.locator("#c-name").fill("groceries")
@@ -525,7 +530,7 @@ def test_11_categories(app):
     app.type_amount("60")
     app.ui.locator(".chip-more").click()
     names = app.ui.locator("#all-categories .row-title").all_inner_texts()
-    assert len(names) == 21 and names == sorted(names, key=str.lower)
+    assert len(names) == 46 and app.ui.locator("#all-categories .group-head").count() == 8      # grouped, not alphabetical
     item = app.ui.locator('#all-categories .row:has-text("Physio")')
     assert "Medical" in item.locator(".badge").inner_text()
     assert app.ui.locator('#all-categories .row:has-text("Donations") .badge').inner_text() == "Donation"
@@ -536,7 +541,7 @@ def test_11_categories(app):
     app.add("40", "Groceries")
     app.type_amount("25.50")
     app.ui.locator(".chip-more").click()
-    app.ui.locator('#all-categories .row:has-text("Medical & dental")').click()
+    app.ui.locator('#all-categories [data-pick="misc.medical"]').click()
     app.tab("summary")
     assert cents(app.ui.locator('#tax-card [data-tax="medical"] .v').inner_text()) == 6000 + 2550
 
@@ -559,11 +564,12 @@ def test_11_categories(app):
     assert "Groceries (hidden)" in app.ui.locator("#e-category option:checked").inner_text()
     app.ui.locator("#e-cancel").click()
     app.tab("summary")
-    assert "Groceries" in app.ui.locator("#by-category .name").all_inner_texts()
+    app.ui.locator('#by-group .grp-row:has-text("Food")').click()
+    assert "Groceries" in app.ui.locator("#by-group .item-row .name").all_inner_texts()
 
     # most-used ordering of chips: Physio (1 use) now leads the unused defaults
     app.tab("add")
-    assert app.ui.locator("#chips .chip-name").all_inner_texts()[:2] == ["Medical & dental", "Physio"]
+    assert app.ui.locator("#chips .chip-name").all_inner_texts()[:2] == ["Medical", "Physio"]
 
     # a built-in has no delete; a used custom one cannot be deleted; an unused one can
     app.tab("profile")
@@ -605,10 +611,10 @@ def test_12_delete_all(app):
     assert app.ui.locator("#sheet-root").is_hidden()
     st = app.state()
     assert st["expenses"] == []
-    assert len(st["categories"]) == 20 and all(c["builtIn"] and not c["hidden"] for c in st["categories"])
+    assert len(st["categories"]) == 45 and all(c["builtIn"] and not c["hidden"] for c in st["categories"])
     assert st["settings"] == {"lastPayment": {"methodId": "credit", "cardId": None}, "testNoticeDismissed": False,
-                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": False}
-    assert st["cards"] == [] and st["schemaVersion"] == 2
+                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": False, "groupsNotice": False}
+    assert st["cards"] == [] and st["schemaVersion"] == 3
     assert app.ui.locator('#category-list .row:has-text("Custom")').count() == 0
     app.tab("history")
     assert "No expenses in November 2026." in app.ui.locator(".empty").inner_text()
@@ -705,10 +711,10 @@ def test_14_embedded_harness(make_app):
     assert app.ui.locator("#month-total").inner_text() == "$32.34"
     app.ui.locator('.row[data-act="edit"]:has-text("Transit")').click()
     app.ui.locator("#e-amount").fill("25.5")
-    app.ui.locator("#e-category").select_option("dining")
+    app.ui.locator("#e-category").select_option("food.restaurant-take-out")
     app.ui.locator("#e-save").click()
     assert app.ui.locator("#month-total").inner_text() == "$37.84"
-    assert app.ui.locator('.row[data-act="edit"]:has-text("Dining & coffee")').count() == 1
+    assert app.ui.locator('.row[data-act="edit"]:has-text("Restaurant / Take-Out")').count() == 1
     app.ui.locator('.row[data-act="edit"]:has-text("Groceries")').click()
     app.ui.locator("#e-delete").click()
     assert app.ui.locator("#e-confirm-text").inner_text() == "Delete this expense?"
@@ -778,7 +784,7 @@ def test_14c_platform_downloads_capability(make_app):
     app.ui.locator('#toast-region .toast-text:has-text("Backup saved")').wait_for()
     saved = frame.evaluate("window.__saves[0]")
     assert saved["filename"] == "daily-spend-2026-11-15.csv"
-    assert saved["data"].startswith("﻿id,date,amount,category,payment_method,card,")
+    assert saved["data"].startswith("﻿id,date,amount,category_group,category,payment_method,card,")
     assert "12.34" in saved["data"]
 
     frame.evaluate("window.__rejectCode = 'declined'")
@@ -966,11 +972,11 @@ def test_17_no_forbidden_apis_in_source():
 def test_18_chip_order_is_frozen_for_the_session(app):
     chips = lambda: app.ui.locator("#chips .chip-name").all_inner_texts()
     start = chips()
-    assert "Travel" not in start
+    assert "Travel / Vacation" not in start
     for amount in ["10", "20", "30"]:
         app.type_amount(amount)
         app.ui.locator(".chip-more").click()
-        app.ui.locator('#all-categories .row:has-text("Travel")').click()
+        app.ui.locator('#all-categories .row:has-text("Travel / Vacation")').click()
         assert chips() == start
     assert len(app.expenses()) == 3
     app.ui.locator(".toast-undo").click()                 # undo does not reorder either
@@ -982,10 +988,10 @@ def test_18_chip_order_is_frozen_for_the_session(app):
     app.tab("add")
     assert chips() == start
     app.reload()
-    assert chips() == ["Travel"] + start[:6] + ["More"]
+    assert chips() == ["Travel / Vacation"] + start[:6] + ["More"]
     # a category change re-ranks straight away
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Travel")').click()
+    app.ui.locator('#category-list .row:has-text("Travel / Vacation")').click()
     app.ui.locator("#c-hidden").check()
     app.ui.locator("#c-save").click()
     app.tab("add")
@@ -1041,7 +1047,7 @@ def test_20_category_formula_prefix_round_trip(make_app):
     src.ui.locator('#all-categories .row:has-text("=Test")').click()
     text = copied_csv(src)
     row = parse_csv(text)[1]
-    assert row[3] == "'=Test" and row[COL["tax_tag"]] == "donation"
+    assert row[COL["category"]] == "'=Test" and row[COL["category_group"]] == "Miscellaneous" and row[COL["tax_tag"]] == "donation"
 
     dst = make_app()
     dst.tab("profile")

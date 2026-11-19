@@ -46,7 +46,8 @@ def test_01_full_picker_path(app):
     assert app.ui.locator("#ac-search").get_attribute("placeholder") == "Search a bank or card"
     assert titles(app, "#ac-list [data-issuer]") == ["American Express", "Maple Bank", "The Northern Trust", "Prairie Credit Union"]
     assert subs(app, "#ac-list [data-issuer]") == ["2 cards", "4 cards", "1 card", "2 cards"]
-    assert app.ui.locator("#ac-list .mono").all_inner_texts() == ["AE", "MB", "NT", "PC"]
+    assert app.ui.locator("#ac-list .ibadge").evaluate_all("(els) => els.map((e) => e.dataset.t)") == ["Amex", "Maple", "NT", "PCU"]
+    assert app.ui.locator("#ac-list .group-head").all_inner_texts() == ["Popular", "All institutions"]      # v2.2 sections
     assert app.ui.locator("#ac-list [data-issuer] .chev").count() == 4
     assert app.ui.locator("#ac-list [data-cat-id]").count() == 0                      # no cards until one is searched for
     assert app.ui.locator("#ac-manual").inner_text() == "My bank or card isn't listed"
@@ -394,11 +395,11 @@ def test_08_chart_cap(app):
 # ---------------------------------------------------------------- 9
 def test_09_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.1';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
-    assert not re.search(r"0\.2\.0", sw + source("app.js"))
+    assert "const VERSION = '0.2.2';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert not re.search(r"0\.2\.[01]", sw + source("app.js"))
     app = make_app(service_workers="allow", cards=None)
-    wait_cached(app.page, cache="ds-0.2.1")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.1"]
+    wait_cached(app.page, cache="ds-0.2.2")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.2"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.1"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.2"
     assert app.console_errors == []

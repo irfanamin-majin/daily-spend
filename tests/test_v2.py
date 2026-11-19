@@ -15,7 +15,7 @@ import urllib.request
 
 import pytest
 
-from conftest import (App, FIXTURE_CARDS, LEGACY_KEY, ROOT, SAMPLE_ROWS, cents, free_port, make_card, make_state,
+from conftest import (App, CAT, FIXTURE_CARDS, LEGACY_KEY, ROOT, SAMPLE_ROWS, cents, free_port, make_card, make_state,
                       make_v1_state)
 from test_v1 import ADD_FITS, CAPTURE_CLIPBOARD, HEADER, COL, LAYOUT_CHECK, SIZES, copied_csv, parse_csv, source
 
@@ -26,7 +26,7 @@ FAILED = "Couldn't get your location. Try again in a moment."
 CALGARY = {"latitude": 51.0447123, "longitude": -114.0718832, "accuracy": 25}
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 MAPS = "https://www.google.com/maps/search/?api=1&query=51.04471,-114.07188"
-CACHE = "ds-0.2.1"
+CACHE = "ds-0.2.2"
 # A location service the test controls: each request waits until the test answers it.
 STUB_GEO = """
   window.__geo = [];
@@ -188,20 +188,20 @@ def test_03_update_ready_banner(browser, tmp_path):
             app.add("9", "Groceries")
             # publish the next version
             sw = (site / "sw.js").read_text()
-            assert "const VERSION = '0.2.1';" in sw
-            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.1';", "const VERSION = '0.2.2';"))
+            assert "const VERSION = '0.2.2';" in sw
+            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.2';", "const VERSION = '0.2.3';"))
             app.reload()                                       # the browser checks for a new worker on navigation
             banner = app.ui.locator("#banner-update")
             banner.wait_for()
             assert "Update ready" in banner.inner_text() and banner.locator("button").inner_text() == "Reload"
             # until Reload is pressed the old version keeps serving and both caches exist
-            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.1", "ds-0.2.2"]
+            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.2", "ds-0.2.3"]
             with app.page.expect_navigation():
                 banner.locator("button").click()
             app.ready()
-            wait_cached(app.page, cache="ds-0.2.2")
+            wait_cached(app.page, cache="ds-0.2.3")
             wait_until(lambda: len(app.page.evaluate("caches.keys()")) == 1)
-            assert app.page.evaluate("caches.keys()") == ["ds-0.2.2"]                 # old cache deleted on activate
+            assert app.page.evaluate("caches.keys()") == ["ds-0.2.3"]                 # old cache deleted on activate
             assert app.ui.locator("#banner-update").count() == 0
             assert len(app.expenses()) == 1                                            # data untouched
             assert app.console_errors == []
@@ -245,7 +245,7 @@ def test_04_manifest_and_icons():
     for a in assets:
         assert os.path.isfile(os.path.join(ROOT, "index.html" if a == "./" else a)), a
     assert all(os.path.join("icons", os.path.basename(i["src"])) in [a.replace("/", os.sep) for a in assets] for i in icons)
-    assert "const VERSION = '0.2.1';" in sw and "version: '0.2.1'," in source("app.js")
+    assert "const VERSION = '0.2.2';" in sw and "version: '0.2.2'," in source("app.js")
     assert os.path.isfile(os.path.join(ROOT, ".nojekyll")) and os.path.isfile(os.path.join(ROOT, "README.md"))
     cards = json.loads(source("data/cards-ca.json"))
     assert {"version", "lastChecked", "issuers", "cards"} <= set(cards)
@@ -510,7 +510,7 @@ def test_06_cards(app):
     assert "Today · Cobalt ••1234" in app.ui.locator("#details-row").inner_text()        # the choice sticks
     app.add("5", "Transit")
     pick_payment(app, "Maple Everyday Debit")
-    app.add("30", "Dining & coffee")
+    app.add("30", "Restaurant / Take-Out")
     assert [x for x in app.expenses() if x["amountCents"] == 3000][0]["paymentMethodId"] == "debit"
     assert [x for x in app.expenses() if x["amountCents"] == 3000][0]["cardId"] == debit["id"]
     pick_payment(app, "Cash")
@@ -542,7 +542,7 @@ def test_06_cards(app):
     assert t["cardId"] == cobalt["id"] and t["paymentMethodId"] == "credit"
 
     app.tab("summary")
-    assert app.ui.locator("#view .section-head").all_inner_texts() == ["By category", "By card"]
+    assert app.ui.locator("#view .section-head").all_inner_texts() == ["By group", "By card"]
     names = app.ui.locator("#by-card .name").all_inner_texts()
     amounts = [cents(x) for x in app.ui.locator("#by-card .amt").all_inner_texts()]
     assert dict(zip(names, amounts)) == {"Maple Everyday Debit": 3000, "Cobalt ••1234": 2600, "Cash & other": 1000}
@@ -682,20 +682,18 @@ def test_08_charts(app):
     assert app.page.evaluate("getComputedStyle(document.getElementById('donut')).animationDuration") == "0.3s"
     assert app.page.evaluate("getComputedStyle(document.querySelector('.dbar')).animationDuration") == "0.3s"
     slices = app.ui.locator("#donut .slice")
-    assert slices.count() == 8                                                     # top 7 plus Other
-    data = slices.evaluate_all("(els) => els.map((e) => [e.getAttribute('aria-label'), Number(e.dataset.cents), e.dataset.cats, e.getAttribute('tabindex'), e.getAttribute('role')])")
+    data = slices.evaluate_all("(els) => els.map((e) => [e.getAttribute('aria-label'), Number(e.dataset.cents), e.dataset.group, e.getAttribute('tabindex'), e.getAttribute('role')])")
+    # v2.2: one slice per group with spending, highest first
+    assert [d[2] for d in data] == ["housing", "misc", "food", "transportation", "communications"]
     assert sum(d[1] for d in data) == total == cents(app.ui.locator("#summary-total").inner_text())
     assert cents(app.ui.locator("#donut-total").text_content()) == total
-    for label, c, cats, tabindex, role in data:
+    for label, c, group, tabindex, role in data:
         assert re.match(r"^.+, \$[\d,]+\.\d\d, \d+%$", label), label
-        assert tabindex == "0" and role == "button" and cats
-    assert data[0][0].startswith("Rent or mortgage, $1,850.00, ") and data[0][2] == "housing"
-    assert data[-1][0].startswith("Other categories, ") and len(data[-1][2].split(",")) == 4      # 11 categories in all
+        assert tabindex == "0" and role == "button" and group
+    assert data[0][0].startswith("Housing, $1,982.60, ") and data[2][0].startswith("Food, $223.61, ")
     assert sum(int(d[0].rsplit(", ", 1)[1].rstrip("%")) for d in data) == 100
-    by_cat = dict(zip(app.ui.locator("#by-category .name").all_inner_texts(), app.ui.locator("#by-category .amt").all_inner_texts()))
-    assert len(by_cat) == 11 and cents(by_cat["Groceries"]) == 17987                # the list stays as the text equivalent
-    groceries = [d for d in data if d[0].startswith("Groceries, ")][0]
-    assert groceries[0].startswith("Groceries, $179.87, ") and groceries[1] == 17987
+    by_group = dict(zip(app.ui.locator("#by-group .grp-row .name").all_inner_texts(), app.ui.locator("#by-group .grp-row .amt").all_inner_texts()))
+    assert len(by_group) == 5 and cents(by_group["Food"]) == 22361              # the list stays as the text equivalent
 
     # daily bars: one per day with spending, today marked
     bars = app.ui.locator("#daily-bars .daybar")
@@ -710,8 +708,13 @@ def test_08_charts(app):
     assert app.ui.locator("#today-dot").count() == 1
     assert app.ui.locator("#daily-bars .dbar").count() + app.ui.locator("#daily-bars .bar-empty").count() == 30    # one per day
 
-    # a slice opens History filtered to that category, for the month
-    tap_inside(app, app.ui.locator('#donut .slice[aria-label^="Groceries, "]'))
+    # a slice opens that group inside Summary; an item there opens History for the month
+    tap_inside(app, app.ui.locator('#donut .slice[data-group="food"]'))
+    assert app.ui.locator('.tab[data-tab="summary"]').get_attribute("aria-current") == "page"
+    assert app.ui.locator("#group-view").get_attribute("data-group") == "food" and app.ui.locator("#charts").count() == 0
+    assert cents(app.ui.locator("#group-total").inner_text()) == 22361
+    assert app.ui.locator("#group-items .name").all_inner_texts() == ["Groceries", "Restaurant / Take-Out"]
+    app.ui.locator('#group-items .cat-row:has-text("Groceries")').click()
     assert app.ui.locator('.tab[data-tab="history"]').get_attribute("aria-current") == "page"
     assert app.ui.locator("#f-category").inner_text() == "Groceries"
     assert app.ui.locator("#f-month").inner_text() == "November 2026 ×"
@@ -723,16 +726,9 @@ def test_08_charts(app):
     assert app.ui.locator(".month-group").count() == 2
     app.ui.locator("#f-clear").click()
 
-    # the Other slice filters to all of its categories
-    app.tab("summary")
-    assert "draw" in app.ui.locator("#charts").get_attribute("class")
-    tap_inside(app, app.ui.locator('#donut .slice[aria-label^="Other categories, "]'))
-    assert app.ui.locator("#f-category").inner_text() == "Category · 4"
-    assert cents(app.ui.locator("#results-total").inner_text()) == data[-1][1]
-    app.ui.locator("#f-clear").click()
-
     # a bar opens History filtered to that day
     app.tab("summary")
+    assert "draw" in app.ui.locator("#charts").get_attribute("class")
     app.ui.locator('#daily-bars .daybar[data-day="2026-11-14"]').click()
     assert app.ui.locator("#f-day").inner_text() == "Yesterday ×"
     assert cents(app.ui.locator("#results-total").inner_text()) == 6230 + 3899
@@ -742,30 +738,32 @@ def test_08_charts(app):
 
     # keyboard: slices and bars take focus and answer Enter and Space
     app.tab("summary")
-    app.ui.locator('#donut .slice[aria-label^="Transit, "]').focus()
+    app.ui.locator('#donut .slice[data-group="transportation"]').focus()
     app.page.keyboard.press("Enter")
-    assert app.ui.locator("#f-category").inner_text() == "Transit"
-    app.tab("summary")
+    assert app.ui.locator("#group-view").get_attribute("data-group") == "transportation"
+    app.ui.locator("#group-back").click()
     app.ui.locator('#daily-bars .daybar[data-day="2026-11-10"]').focus()
     app.page.keyboard.press("Space")
     assert app.ui.locator("#f-day").inner_text() == "Tue, Nov 10 ×"
-    # the category list rows do the same job
+    # the By group rows do the same job, in place
     app.tab("summary")
-    app.ui.locator('#by-category .cat-row:has-text("Donations")').click()
+    app.ui.locator('#by-group .grp-row:has-text("Miscellaneous")').click()
+    app.ui.locator('#by-group .item-row:has-text("Donations")').click()
     assert app.ui.locator("#f-category").inner_text() == "Donations" and cents(app.ui.locator("#results-total").inner_text()) == 2150
     app.ui.locator("#f-clear").click()
 
-    # another month, a month with one category (a full ring), an empty month
+    # another month, a month with one group (a full ring), an empty month
     app.tab("summary")
     app.ui.locator('[data-act="month"][data-delta="-1"]').click()
     assert "draw" not in app.ui.locator("#charts").get_attribute("class")           # drawn once, on arrival
-    assert app.ui.locator("#donut .slice").count() == 3 and app.ui.locator("#today-dot").count() == 0
+    assert app.ui.locator("#donut .slice").count() == 2 and app.ui.locator("#today-dot").count() == 0
     for _ in range(7):
         app.ui.locator('[data-act="month"][data-delta="-1"]').click()
     assert app.ui.locator("#month-label").inner_text() == "March 2026"
     assert app.ui.locator("#donut .slice").count() == 1
-    assert app.ui.locator("#donut .slice").get_attribute("aria-label") == "Medical & dental, $99.00, 100%"
+    assert app.ui.locator("#donut .slice").get_attribute("aria-label") == "Miscellaneous, $99.00, 100%"
     tap_inside(app, app.ui.locator("#donut .slice"))
+    app.ui.locator('#group-items .cat-row:has-text("Medical")').click()
     assert app.ui.locator("#f-month").inner_text() == "March 2026 ×" and cents(app.ui.locator("#results-total").inner_text()) == 9900
     app.ui.locator("#f-clear").click()
     app.tab("summary")
@@ -824,12 +822,12 @@ def test_09_quick_repeat(make_app):
     assert app.ui.locator("#e-again").inner_text() == "Log again today"
     app.ui.locator("#e-again").click()
     assert app.sheet_hidden()
-    assert app.toast().inner_text() == "Saved $62.30 · Gas & parking"
+    assert app.toast().inner_text() == "Saved $62.30 · Gas / Diesel"
     check_copy("seed-000")                                                           # the location is not copied
 
     # 2. a swipe right on a History row
     drag(app, app.ui.locator('.row[data-id="seed-001"]'), 130)
-    assert app.toast().inner_text() == "Saved $4.75 · Dining & coffee"
+    assert app.toast().inner_text() == "Saved $4.75 · Restaurant / Take-Out"
     assert app.sheet_hidden()
     check_copy("seed-001")
 
@@ -839,13 +837,13 @@ def test_09_quick_repeat(make_app):
     app.ui.locator("#btn-recent").click()
     titles = app.ui.locator("#recent-list .recent-row .row-title").all_inner_texts()
     assert len(titles) == 10
-    assert titles[:3] == ["$62.30 · Gas & parking", "$4.75 · Dining & coffee", "$4.75 · Dining & coffee"]
+    assert titles[:3] == ["$62.30 · Gas / Diesel", "$4.75 · Restaurant / Take-Out", "$4.75 · Restaurant / Take-Out"]
     subs = app.ui.locator("#recent-list .recent-row .row-sub").all_inner_texts()
     assert subs[0] == "Petro-Canada · Rewards ••4321" and subs[1].startswith("Tim Hortons · ") and subs[2] == "tim hortons · Rewards ••4321"
     ids = app.ui.locator("#recent-list [data-again]").evaluate_all("(els) => els.map((e) => e.dataset.again)")
     assert ids[:3] == ["seed-000", "seed-001", "seed-003"] and len(set(ids)) == 10
     app.ui.locator('#recent-list [data-again="seed-003"]').click()
-    assert app.sheet_hidden() and app.toast().inner_text() == "Saved $4.75 · Dining & coffee"
+    assert app.sheet_hidden() and app.toast().inner_text() == "Saved $4.75 · Restaurant / Take-Out"
     check_copy("seed-003")
     assert app.state()["settings"]["lastPayment"] == {"methodId": "credit", "cardId": None}     # a repeat does not change the default
 
@@ -878,9 +876,9 @@ def test_10_merchant_remembers_category(app):
     assert app.ui.locator("#usual-pill").count() == 0
     with_merchant("2.25", "Tim Hortons")
     assert app.ui.locator("#usual-pill").count() == 0                              # never seen before
-    app.chip("Dining & coffee").click()
+    app.chip("Restaurant / Take-Out").click()
     with_merchant("3.10", "Tim Hortons")
-    app.chip("Dining & coffee").click()
+    app.chip("Restaurant / Take-Out").click()
     chips_before = app.ui.locator("#chips .chip-name").all_inner_texts()
 
     # typing the merchant (any case) shows the suggestion above the chips, live while the sheet is open
@@ -891,7 +889,7 @@ def test_10_merchant_remembers_category(app):
     assert app.ui.locator("#usual-pill").count() == 1
     app.ui.locator("#d-done").click()
     pill = app.ui.locator("#usual-pill")
-    assert pill.inner_text() == "Usual: ☕ Dining & coffee"
+    assert pill.inner_text() == "Usual: 🍔 Restaurant / Take-Out"
     above = app.page.evaluate("document.getElementById('usual-pill').getBoundingClientRect().bottom <= document.getElementById('chips').getBoundingClientRect().top")
     assert above
     # with no amount it behaves like a chip: looks disabled, does not save
@@ -901,9 +899,9 @@ def test_10_merchant_remembers_category(app):
     app.type_amount("4.50")
     assert pill.get_attribute("aria-disabled") == "false"
     pill.click()
-    assert app.toast().inner_text() == "Saved $4.50 · Dining & coffee"
+    assert app.toast().inner_text() == "Saved $4.50 · Restaurant / Take-Out"
     saved = [e for e in app.expenses() if e["amountCents"] == 450][0]
-    assert saved["categoryId"] == "dining" and saved["merchant"] == "tim hortons"
+    assert saved["categoryId"] == "food.restaurant-take-out" and saved["merchant"] == "tim hortons"
     assert app.ui.locator("#usual-pill").count() == 0                              # gone with the cleared merchant
     assert app.ui.locator("#chips .chip-name").all_inner_texts() == chips_before   # chip order stays frozen
 
@@ -914,11 +912,11 @@ def test_10_merchant_remembers_category(app):
             ("2026-11-02", 100, "gifts", "credit", "Café Olé", "")]
     st = make_state(rows)
     app.seed(st)
-    for merchant, want in [("corner shop", "Usual: 🛍️ Shopping"), ("Depot", "Usual: ⛽ Gas & parking"), ("cafe ole", "Usual: 🎁 Gifts")]:
+    for merchant, want in [("corner shop", "Usual: 🛍️ Shopping"), ("Depot", "Usual: ⛽ Gas / Diesel"), ("cafe ole", "Usual: 🎁 Gifts")]:
         with_merchant("1", merchant)
         assert app.ui.locator("#usual-pill").inner_text() == want
         app.ui.locator('[data-key="back"]').click()
-    [c for c in st["categories"] if c["id"] == "gifts"][0]["hidden"] = True
+    [c for c in st["categories"] if c["id"] == "misc.gifts"][0]["hidden"] = True
     app.seed(st)
     with_merchant("1", "Café Olé")
     assert app.ui.locator("#usual-pill").count() == 0
@@ -969,10 +967,10 @@ def test_11_search_and_filters(app):
 
     # + category (multi-select sheet)
     app.ui.locator("#f-category").click()
-    assert app.ui.locator("#fc-list input").count() == 20
-    app.ui.locator('#fc-list label:has-text("Dining & coffee")').click()
+    assert app.ui.locator("#fc-list input[data-item]").count() == 45 and app.ui.locator("#fc-list input[data-group]").count() == 8
+    app.ui.locator('#fc-list label:has-text("Restaurant / Take-Out")').click()
     app.ui.locator("#fc-done").click()
-    assert app.ui.locator("#f-category").inner_text() == "Dining & coffee"
+    assert app.ui.locator("#f-category").inner_text() == "Restaurant / Take-Out"
     assert shown() == ["seed-000", "seed-004", "seed-006"] and total() == 3975
     # + card
     app.ui.locator("#f-card").click()
@@ -1004,13 +1002,13 @@ def test_11_search_and_filters(app):
     assert shown() == ["seed-004", "seed-005"] and total() == 11400
     app.ui.locator("#f-clear").click()
     app.ui.locator("#f-category").click()
-    app.ui.locator('#fc-list label:has-text("Dining & coffee")').click()
+    app.ui.locator('#fc-list label:has-text("Restaurant / Take-Out")').click()
     app.ui.locator('#fc-list label:has-text("Groceries")').click()
-    assert app.ui.locator("#f-category").inner_text() == "Category · 2"            # applied while the sheet is open
+    assert app.ui.locator("#f-category").inner_text() == "Food"                    # applied while the sheet is open; both Food items = the group
     app.ui.locator("#fc-done").click()
     assert total() == 475 + 3899 + 8412 + 7250 + 1500 + 2000
     app.ui.locator("#f-category").click()
-    assert app.ui.locator("#fc-list input:checked").count() == 2
+    assert app.ui.locator("#fc-list input[data-item]:checked").count() == 2
     app.ui.locator("#fc-none").click()
     app.ui.locator("#fc-done").click()
     assert app.ui.locator("#f-clear").count() == 0
@@ -1093,7 +1091,7 @@ def test_12_swipe_actions(app):
     # a swipe right logs it again today
     app.page.wait_for_timeout(400)
     drag(app, row(3), 130)
-    assert app.toast().inner_text() == "Saved $38.99 · Dining & coffee"
+    assert app.toast().inner_text() == "Saved $38.99 · Restaurant / Take-Out"
     new = [e for e in app.expenses() if not e["id"].startswith("seed-")]
     assert len(new) == 1 and new[0]["date"] == "2026-11-15" and new[0]["merchant"] == "Phil & Sebastian"
     app.ui.locator(".toast-undo").click()
@@ -1244,7 +1242,7 @@ def test_14_csv_v2_round_trip_and_v1_restore(make_app):
     src = make_app(init_scripts=[CAPTURE_CLIPBOARD])
     src.seed(make_state(rows, cards=cards))
     text = copied_csv(src)
-    assert text.split("\r\n")[0] == HEADER == ("id,date,amount,category,payment_method,card,card_last4,merchant,note,tax_tag,"
+    assert text.split("\r\n")[0] == HEADER == ("id,date,amount,category_group,category,payment_method,card,card_last4,merchant,note,tax_tag,"
                                                 "latitude,longitude,location_accuracy_m,created_at,updated_at")
     body = {r[0]: dict(zip(HEADER.split(","), r)) for r in parse_csv(text)[1:]}
     a = body["seed-000"]
@@ -1339,17 +1337,24 @@ def test_15_v1_state_migrates(make_app):
     raw_before = app.page.evaluate("k => localStorage.getItem(k)", LEGACY_KEY)
     app.page.reload()
     app.ui.locator("#amount").wait_for()
-    assert app.sheet_hidden() and app.ui.locator("#ob-skip").count() == 0          # existing users are not walked through setup
-    assert app.ui.locator("#banner-corrupt").count() == 0
+    assert app.ui.locator("#ob-skip").count() == 0                                 # existing users are not walked through setup
+    assert "8 budget groups" in app.ui.locator("#mig-text").inner_text()           # v2.2: told once that categories moved
+    app.ui.locator("#mig-ok").click()
+    assert app.sheet_hidden() and app.ui.locator("#banner-corrupt").count() == 0
 
     st = app.state()
-    assert st["schemaVersion"] == 2 and st["cards"] == []
+    assert st["schemaVersion"] == 3 and st["cards"] == []
     assert st["settings"] == {"lastPayment": {"methodId": "cash", "cardId": None}, "testNoticeDismissed": True,
-                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": True}
+                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": True, "groupsNotice": False}
     assert len(st["expenses"]) == len(v1["expenses"]) == 18
     for old, new in zip(v1["expenses"], st["expenses"]):
-        assert new == {**old, "cardId": None, "location": None}                  # every field kept, two added
-    assert st["categories"] == v1["categories"]                                    # hidden, renamed and custom ones included
+        want = "c_custom" if old["categoryId"] == "c_custom" else CAT[old["categoryId"]]
+        assert new == {**old, "categoryId": want, "cardId": None, "location": None}    # every field kept; category moved by the table
+    cats = {c["id"]: c for c in st["categories"]}
+    assert len(cats) == 46
+    assert cats["food.groceries"]["hidden"] is True                                # hidden stays hidden
+    assert cats["food.restaurant-take-out"]["name"] == "Coffee runs"               # a rename is kept
+    assert (cats["c_custom"]["name"], cats["c_custom"]["groupId"], cats["c_custom"]["taxTag"], cats["c_custom"]["builtIn"]) == ("Vet", "misc", "medical", False)
     assert app.page.evaluate("k => localStorage.getItem(k)", LEGACY_KEY) == raw_before      # the old copy is left alone
     # and the app shows it
     assert "Today · Cash" in app.ui.locator("#details-row").inner_text()
@@ -1452,7 +1457,7 @@ def test_16_layout(make_app, size, scheme):
     app.ui.locator("#f-loc").click()
     app.ui.locator("#f-category").click()
     check("category filter sheet")
-    for name in ["Groceries", "Dining & coffee", "Hydro & utilities"]:
+    for name in ["Groceries", "Restaurant / Take-Out", "Gas & Hydro"]:
         app.ui.locator(f'#fc-list label:has-text("{name}")').click()
     app.ui.locator("#fc-done").click()
     app.ui.locator("#f-card").click()
