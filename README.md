@@ -1,17 +1,17 @@
 # Daily Spend
 
-A small expense tracker for Canadians, built to make typing in an expense on a phone as fast as possible: type the amount, tap a category, done.
+A small expense tracker for Canadians, built to make typing in an expense on a phone as fast as possible: type the amount, tap a category, press Save.
 
 It is a plain static web app (HTML, CSS and JavaScript, no build step, no dependencies) that can be added to a phone's home screen and works offline.
 
 ## What it does
 
-- **Add**: an in-page keypad, eight category chips, and a one-line details row for the date, payment method or card, merchant, note and location.
+- **Add**: an in-page keypad, category chips, a Save button that turns green once the amount and category are in, and a one-line details row for the date, payment method or card, merchant, note and location.
 - **Quick repeat**: log an earlier expense again today from the Recent sheet, a swipe, or the Edit sheet.
 - **Merchant memory**: a merchant you have used before offers its usual category.
-- **History**: search by merchant or note, filter by category, card or location, swipe a row to delete or repeat it.
+- **History**: search by merchant or note, filter by category, by card or whole institution, or by location; swipe a row to delete or repeat it.
 - **Categories**: 45 everyday items arranged in 8 fixed budget groups (Housing, Debt Payments, Communications, Food, Transportation, Recreation, Miscellaneous, Insurance). You can add, rename, move and hide items.
-- **Summary**: a donut by group and a bar per day that you can tap, each group opening to its items, totals by card, and a Tax time card for medical, donation and childcare categories.
+- **Summary**: for the month, the last 3 months or the last 12; a donut by group and bars per day or per month that you can tap, each group opening to its items, totals by card, and a Tax time card for medical, donation and childcare categories.
 - **Profile**: your cards (picked from a built-in Canadian list or added by hand), location setting, categories, CSV backup and restore.
 - **Location (optional)**: saves a GPS pin with an expense. Off unless you turn it on or tap the button.
 
@@ -65,7 +65,7 @@ python3 -m pytest tests -q
 
 - The tests start their own local server and open the site from a subpath, the way GitHub Pages serves it.
 - Chrome is expected at `/usr/bin/google-chrome`. Change `CHROME` in `tests/conftest.py` if yours is elsewhere.
-- `tests/test_v1.py` holds the original acceptance tests; `tests/test_v2.py` covers offline use, location, cards, charts, quick repeat, search, swipes, first-run setup, backups and data migration; `tests/test_v2_1.py` covers the card picker and chart scaling; `tests/test_v2_2.py` covers budget groups, the move from the old categories, and institution badges.
+- `tests/test_v1.py` holds the original acceptance tests; `tests/test_v2.py` covers offline use, location, cards, charts, quick repeat, search, swipes, first-run setup, backups and data migration; `tests/test_v2_1.py` covers the card picker and chart scaling; `tests/test_v2_2.py` covers budget groups, the move from the old categories, and institution badges; `tests/test_v2_3.py` covers the Save button, the institution filter, group colours and time ranges.
 - Screenshots: `python3 tests/take_screenshots.py <output folder>`.
 
 ## Releasing a change

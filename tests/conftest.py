@@ -161,9 +161,15 @@ class App:
     def chip(self, name):
         return self.ui.locator(".chip").filter(has=self.ui.locator(f'.chip-name:text-is("{name}")'))
 
+    def save(self):
+        """Press Save expense (v2.3: choosing a category only selects it)."""
+        self.ui.locator("#btn-save").click()
+
     def add(self, amount, category):
+        """Type the amount, select the category chip, press Save."""
         self.type_amount(amount)
         self.chip(category).click()
+        self.save()
 
     def pick_card(self, issuer, card, kind=None):
         """In the open Add a card sheet: institution, then type (when asked for), then card. Ends on the confirm step."""

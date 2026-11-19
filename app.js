@@ -6,7 +6,7 @@
    ===================================================================== */
 const STRINGS = {
   appName: 'Daily Spend',
-  version: '0.2.2',
+  version: '0.2.3',
   versionLabel: (v) => `Version ${v}`,
   privacy: 'Your entries stay on this device. No account, no tracking. Nothing is sent anywhere, except that opening a location in Google Maps shares that location with Google.',
   tabs: { add: 'Add', history: 'History', summary: 'Summary', profile: 'Profile' },
@@ -28,10 +28,13 @@ const STRINGS = {
   keyLabels: { '.': 'Decimal point', back: 'Backspace. Hold to clear' },
   detailsRowLabel: 'Date, payment method, merchant, note and location',
   addMerchantOrNote: 'Add merchant or note',
-  enterAmountFirst: 'Enter an amount first',
+  saveExpense: 'Save expense',
+  missingBoth: 'Enter an amount and choose a category',
+  missingAmount: 'Enter an amount',
+  missingCategory: 'Choose a category',
   moreChip: 'More',
   moreChipLabel: 'More categories',
-  chipLabel: (name) => `Save to ${name}`,
+  chipLabel: (name) => name,
   saved: (amount, cat, day) => `Saved ${amount} · ${cat}${day ? ' · ' + day : ''}`,
   undo: 'Undo',
   undone: 'Expense removed',
@@ -63,6 +66,14 @@ const STRINGS = {
   // Summary
   expenseCount: (n) => `${n} ${n === 1 ? 'expense' : 'expenses'}`,
   byGroup: 'By group',
+  rangeLabel: 'Time range',
+  ranges: { month: 'Month', 3: '3 months', 12: '12 months' },
+  monthsCount: (n) => `${n} months`,
+  rangeAverage: (amount) => `${amount} a month on average · includes this month so far`,
+  monthlyTitle: 'Month by month',
+  monthlyLabel: 'Spending by month. Each bar opens that month.',
+  soFar: 'so far',
+  chartHintRange: 'Tap a slice to open a group, or a bar to see that month.',
   allGroups: '‹ All groups',
   groupShare: (pct, month) => `${pct}% of ${month}`,
   groupItems: (name) => `In ${name}`,
@@ -167,7 +178,7 @@ const STRINGS = {
   againLabel: (what) => `Log ${what} again today`,
   logAgainToday: 'Log again today',
   usual: (emoji, name) => `Usual: ${emoji} ${name}`,
-  usualLabel: (name) => `Save to ${name}, the usual category for this merchant`,
+  usualLabel: (name) => `${name}, the usual category for this merchant`,
   // History: search and filters
   searchPlaceholder: 'Search merchant or note',
   searchLabel: 'Search expenses by merchant or note',
@@ -177,8 +188,10 @@ const STRINGS = {
   filterWholeGroup: (name) => `Everything in ${name}`,
   filterWholeGroupHint: 'Select the whole group',
   filterCard: 'Card',
-  filterCardTitle: 'Filter by card',
-  filterAllCards: 'All cards and other ways',
+  filterCardTitle: 'Card or institution',
+  filterWholeInstitution: (name) => `All cards at ${name}`,
+  otherCards: 'Other cards',
+  selectedCount: (n) => `${n} selected`,
   filterHasLocation: '📍 Has location',
   filterRemovable: (label) => `${label} ×`,
   filterRemove: (label) => `Remove filter: ${label}`,
@@ -1062,20 +1075,23 @@ function removeCard(id) {
 }
 
 /* ----- History filters ----- */
-function emptyFilters() { return { text: '', cats: [], card: null, hasLocation: false, day: null, month: null }; }
+// cards: card ids and/or NO_CARD. range: { from: 'YYYY-MM', to: 'YYYY-MM' }, set from Summary's 3 and 12 month views.
+function emptyFilters() { return { text: '', cats: [], cards: [], hasLocation: false, day: null, month: null, range: null }; }
 
 function filtersActive(f) {
-  return !!(f.text.trim() || f.cats.length || f.card !== null || f.hasLocation || f.day || f.month);
+  return !!(f.text.trim() || f.cats.length || f.cards.length || f.hasLocation || f.day || f.month || f.range);
 }
 
 function filterExpenses(f) {
   const q = fold(f.text.trim());
   const cats = new Set(f.cats);
+  const cards = new Set(f.cards);
   const month = f.month ? monthPrefix(f.month) : null;
   return state.expenses.filter((e) => {
     if (q && fold(e.merchant + ' ' + e.note).indexOf(q) === -1) return false;
     if (cats.size && !cats.has(e.categoryId)) return false;
-    if (f.card !== null && (f.card === NO_CARD ? !!e.cardId : e.cardId !== f.card)) return false;
+    if (cards.size && !cards.has(e.cardId || NO_CARD)) return false;
+    if (f.range && (e.date.slice(0, 7) < f.range.from || e.date.slice(0, 7) > f.range.to)) return false;
     if (f.hasLocation && !e.location) return false;
     if (f.day && e.date !== f.day) return false;
     if (month && e.date.slice(0, 7) !== month) return false;
@@ -1273,6 +1289,7 @@ const ui = {
   corruptDismissed: false,
   downloads: null,            // platform capability when embedded
   canDownload: false,
+  range: 'month',             // Summary time range: 'month', '3' or '12'; lasts for the session
   summaryGroup: null,         // group opened inside Summary, or null for the overview
   openGroups: new Set(),      // groups expanded in the By group list
   drawCharts: false,          // play the chart draw animation on the next Summary render
@@ -1293,7 +1310,7 @@ function resetDraft() {
   ui.amount = '';
   const pay = defaultPayment();
   // date: null means today
-  ui.draft = { date: null, paymentMethodId: pay.methodId, cardId: pay.cardId, merchant: '', note: '', location: null };
+  ui.draft = { date: null, categoryId: null, paymentMethodId: pay.methodId, cardId: pay.cardId, merchant: '', note: '', location: null };
 }
 const draftDate = () => ui.draft.date || todayStr();
 
@@ -1611,13 +1628,13 @@ function draftLocationHtml() {
    ===================================================================== */
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'];
 
-// A chip shows the item's emoji and name. `caption` adds the group in small text, for chips
-// that could be mistaken for each other (see chipCaptions).
-function chipHtml(cat, disabled, caption) {
-  return `<button type="button" class="chip${caption ? ' has-caption' : ''}" data-act="chip" data-cat="${esc(cat.id)}" aria-disabled="${disabled}"
+// A chip shows the item's emoji and name, and selects that category (it does not save).
+// `caption` adds the group in small text, for chips that could be mistaken for each other.
+function chipHtml(cat, selected, caption) {
+  return `<button type="button" class="chip${caption ? ' has-caption' : ''}${selected ? ' selected' : ''}" data-act="chip" data-cat="${esc(cat.id)}" aria-pressed="${selected}"
     aria-label="${esc(STRINGS.chipLabel(caption ? cat.name + ', ' + caption : cat.name))}">
     <span class="chip-emoji" aria-hidden="true">${esc(cat.emoji)}</span><span class="chip-name">${esc(cat.name)}</span>${
-    caption ? `<span class="chip-group">${esc(caption)}</span>` : ''}</button>`;
+    caption ? `<span class="chip-group">${esc(caption)}</span>` : ''}${selected ? '<span class="chip-check" aria-hidden="true">✓</span>' : ''}</button>`;
 }
 
 // Two visible chips can be confused when their names start with the same word but they sit in
@@ -1639,24 +1656,39 @@ function detailsRowHtml() {
   return `<span class="details-text"><span class="details-main">${esc(main)}</span><span class="details-sub">${esc(sub)}</span></span>${ICONS.chev}`;
 }
 
-// "Usual: ☕ Dining & coffee" for a merchant seen before. Tapping it saves, like a chip.
-function usualPillHtml(disabled) {
+// "Usual: 🍔 Restaurant / Take-Out" for a merchant seen before. Tapping it selects, like a chip.
+function usualPillHtml() {
   const cat = usualCategoryFor(ui.draft.merchant);
   if (!cat) return '';
-  return `<button type="button" class="usual-pill" id="usual-pill" data-act="usual" data-cat="${esc(cat.id)}" aria-disabled="${disabled}"
+  return `<button type="button" class="usual-pill" id="usual-pill" data-act="usual" data-cat="${esc(cat.id)}" aria-pressed="${cat.id === ui.draft.categoryId}"
     aria-label="${esc(STRINGS.usualLabel(cat.name))}"><span>${esc(STRINGS.usual(cat.emoji, cat.name))}</span></button>`;
 }
 function refreshUsual() {
   const slot = $('#usual-slot');
-  if (slot) slot.innerHTML = usualPillHtml(typedToCents(ui.amount) <= 0);
+  if (slot) slot.innerHTML = usualPillHtml();
+}
+
+// The seven chips of this session. A category picked elsewhere (More, Usual) that is not among
+// them borrows the seventh slot for this entry only; the frozen order returns afterwards.
+function visibleChips() {
+  const top = topCategories();
+  const picked = ui.draft.categoryId ? state.categories.find((c) => c.id === ui.draft.categoryId && !c.hidden) : null;
+  if (picked && !top.some((c) => c.id === picked.id)) {
+    if (top.length >= 7) top[6] = picked; else top.push(picked);
+  }
+  return top;
+}
+
+function chipsHtml() {
+  const top = visibleChips(), captions = chipCaptions(top);
+  return top.map((c) => chipHtml(c, c.id === ui.draft.categoryId, captions.get(c.id))).join('') +
+    `<button type="button" class="chip chip-more" data-act="chip-more" aria-label="${esc(STRINGS.moreChipLabel)}">
+       <span class="chip-emoji" aria-hidden="true">···</span><span class="chip-name">${esc(STRINGS.moreChip)}</span></button>`;
 }
 
 VIEWS.add = function renderAdd() {
-  const disabled = typedToCents(ui.amount) <= 0;
-  const top = topCategories(), captions = chipCaptions(top);
-  const chips = top.map((c) => chipHtml(c, disabled, captions.get(c.id))).join('') +
-    `<button type="button" class="chip chip-more" data-act="chip-more" aria-disabled="${disabled}" aria-label="${esc(STRINGS.moreChipLabel)}">
-       <span class="chip-emoji" aria-hidden="true">···</span><span class="chip-name">${esc(STRINGS.moreChip)}</span></button>`;
+  // a selected category that has since been hidden or removed is dropped
+  if (ui.draft.categoryId && !state.categories.some((c) => c.id === ui.draft.categoryId && !c.hidden)) ui.draft.categoryId = null;
   const keys = KEYS.map((k) => {
     if (k === 'back') {
       return `<button type="button" class="key key-flat" data-key="back" aria-label="${esc(STRINGS.keyLabels.back)}">${ICONS.back}</button>`;
@@ -1671,19 +1703,48 @@ VIEWS.add = function renderAdd() {
     `<section class="add">
        <div class="amount-wrap">
          <div class="amount" id="amount"></div>
-         <div class="amount-hint" id="amount-hint" role="status"></div>
        </div>
        <div class="details-line">
          <button type="button" class="details-row" id="details-row" data-act="details" aria-label="${esc(STRINGS.detailsRowLabel)}">${detailsRowHtml()}</button>
          ${recent}
        </div>
-       <div id="usual-slot">${usualPillHtml(disabled)}</div>
-       <div class="chips" id="chips">${chips}</div>
+       <div id="usual-slot">${usualPillHtml()}</div>
+       <div class="chips" id="chips">${chipsHtml()}</div>
        <div class="keypad" id="keypad">${keys}</div>
+       <p class="save-hint" id="save-hint" role="status"></p>
+       <button type="button" class="save-btn" id="btn-save" data-act="save" aria-disabled="true">${esc(STRINGS.saveExpense)}</button>
      </section>`;
   updateAmount();
   bindBackspace($('[data-key="back"]', el.view));
 };
+
+// The two required fields. Everything else on the Add screen is optional.
+function missingFields() {
+  return { amount: typedToCents(ui.amount) <= 0, category: !ui.draft.categoryId };
+}
+
+// Red outlines on what is missing, the hint line, and the Save button: grey until ready, then green.
+function updateSaveState() {
+  const missing = missingFields();
+  const amount = $('#amount'), chips = $('#chips'), btn = $('#btn-save'), hint = $('#save-hint');
+  if (!amount || !chips || !btn || !hint) return;
+  amount.classList.toggle('missing', missing.amount);
+  chips.classList.toggle('missing', missing.category);
+  const ready = !missing.amount && !missing.category;
+  btn.setAttribute('aria-disabled', String(!ready));
+  btn.classList.toggle('ready', ready);
+  hint.textContent = ready ? '' : missing.amount && missing.category ? STRINGS.missingBoth
+    : missing.amount ? STRINGS.missingAmount : STRINGS.missingCategory;
+}
+
+// Chips and the Usual pill toggle; the More sheet always sets.
+function selectCategory(id, toggle) {
+  ui.draft.categoryId = toggle && ui.draft.categoryId === id ? null : id;
+  const chips = $('#chips');
+  if (chips) chips.innerHTML = chipsHtml();
+  refreshUsual();
+  updateSaveState();
+}
 
 function updateAmount() {
   const node = $('#amount');
@@ -1693,25 +1754,16 @@ function updateAmount() {
   node.textContent = text;
   node.setAttribute('aria-label', STRINGS.amountLabel(text));
   node.classList.toggle('is-zero', zero);
-  $$('#chips .chip, #usual-pill').forEach((chip) => chip.setAttribute('aria-disabled', String(zero)));
+  updateSaveState();
 }
 
-function shakeAmount() {
-  const node = $('#amount');
+function shake(node) {
   if (!node) return;
   node.classList.remove('shake');
   void node.offsetWidth;
   node.classList.add('shake');
 }
-
-let hintTimer = null;
-function showAmountHint(text) {
-  const node = $('#amount-hint');
-  if (!node) return;
-  node.textContent = text;
-  clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => { const n = $('#amount-hint'); if (n) n.textContent = ''; }, 2200);
-}
+const shakeAmount = () => shake($('#amount'));
 
 function pressKey(key) {
   if (key === 'back') {
@@ -1745,11 +1797,6 @@ function bindBackspace(btn) {
   });
 }
 
-function nudgeAmount() {
-  shakeAmount();
-  showAmountHint(STRINGS.enterAmountFirst);
-}
-
 // The standard "Saved" toast with Undo, shared by every way of logging an expense.
 function announceSaved(expense) {
   const day = expense.date === todayStr() ? '' : dayLabel(expense.date);
@@ -1760,14 +1807,21 @@ function announceSaved(expense) {
   });
 }
 
-function saveDraftTo(categoryId) {
-  const cents = typedToCents(ui.amount);
-  if (cents <= 0) { nudgeAmount(); return; }
+// The Save button. Not ready: the missing fields shake and nothing is saved. Ready: the expense
+// is saved, the toast offers Undo, and the form starts again (the payment choice stays).
+function saveDraft() {
+  const missing = missingFields();
+  if (missing.amount || missing.category) {
+    $$('#amount, #chips').forEach((n) => n.classList.remove('shake'));     // only what is missing now shakes
+    if (missing.amount) shakeAmount();
+    if (missing.category) shake($('#chips'));
+    return;
+  }
   const d = ui.draft;
   const expense = addExpense({
-    amountCents: cents,
+    amountCents: typedToCents(ui.amount),
     date: draftDate(),
-    categoryId,
+    categoryId: d.categoryId,
     paymentMethodId: d.paymentMethodId,
     cardId: d.cardId,
     merchant: d.merchant.trim(),
@@ -1809,10 +1863,10 @@ function tagBadge(cat) {
 const groupHeadHtml = (group) =>
   `<p class="group-head" data-group="${group.id}"><span aria-hidden="true">${esc(group.emoji)}</span> ${esc(group.name)}</p>`;
 
-// The More sheet: every visible item under its group heading.
+// The More sheet: every visible item under its group heading. Picking one selects it and closes the sheet.
 function openAllCategoriesSheet() {
   const rows = itemsByGroup(false).map(({ group, items }) => groupHeadHtml(group) + items.map((c) =>
-    `<button type="button" class="row" data-pick="${esc(c.id)}">
+    `<button type="button" class="row" data-pick="${esc(c.id)}" aria-pressed="${c.id === ui.draft.categoryId}">
        <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
        <span class="row-text"><span class="row-title">${esc(c.name)}</span></span>${tagBadge(c)}</button>`).join('')).join('');
   const node = openSheet(STRINGS.allCategoriesTitle, `<div class="sheet-list" id="all-categories">${rows}</div>`);
@@ -1820,7 +1874,7 @@ function openAllCategoriesSheet() {
     const btn = e.target.closest('[data-pick]');
     if (!btn) return;
     closeSheet();
-    saveDraftTo(btn.dataset.pick);
+    selectCategory(btn.dataset.pick, false);       // selects; the Save button saves
   });
 }
 
@@ -1977,16 +2031,18 @@ function filterChipsHtml(active) {
     });
     catLabel = whole ? whole.name : STRINGS.filterCategoryCount(f.cats.length);
   }
-  let cardLabel = STRINGS.filterCard;
-  if (f.card === NO_CARD) cardLabel = STRINGS.cashAndOther;
-  else if (f.card !== null) { const card = cardById(f.card); cardLabel = card ? cardDisplayName(card) : STRINGS.filterCard; }
+  const cardLabel = cardFilterLabel(f.cards);
   const parts = [
     chip('f-category', 'filter-category', catLabel, f.cats.length > 0),
-    chip('f-card', 'filter-card', cardLabel, f.card !== null),
+    chip('f-card', 'filter-card', cardLabel, f.cards.length > 0),
     chip('f-loc', 'filter-loc', STRINGS.filterHasLocation, f.hasLocation)
   ];
   if (f.day) parts.push(chip('f-day', 'filter-day-clear', STRINGS.filterRemovable(dayLabel(f.day)), true, ` aria-label="${esc(STRINGS.filterRemove(dayLabel(f.day)))}"`));
   if (f.month) parts.push(chip('f-month', 'filter-month-clear', STRINGS.filterRemovable(monthLabel(f.month)), true, ` aria-label="${esc(STRINGS.filterRemove(monthLabel(f.month)))}"`));
+  if (f.range) {
+    const label = rangeLabelOf(f.range.from, f.range.to);
+    parts.push(chip('f-range', 'filter-range-clear', STRINGS.filterRemovable(label), true, ` aria-label="${esc(STRINGS.filterRemove(label))}"`));
+  }
   if (active) parts.push(`<button type="button" class="fchip fchip-clear" id="f-clear" data-act="filter-clear">${esc(STRINGS.clear)}</button>`);
   return `<div class="fchips" id="h-filters">${parts.join('')}</div>`;
 }
@@ -2091,23 +2147,72 @@ function openCategoryFilterSheet() {
   $('#fc-done', node).addEventListener('click', closeSheet);
 }
 
-function openCardFilterSheet() {
-  const used = new Set(state.expenses.map((e) => e.cardId).filter(Boolean));
-  const cards = activeCards().concat(archivedCards().filter((c) => used.has(c.id)));
-  const row = (value, label, sub, colour) =>
-    `<button type="button" class="row" data-card="${esc(value)}" aria-pressed="${String(ui.filters.card === (value === '' ? null : value))}">
-       ${colour ? `<i class="card-dot sw-${colour}" aria-hidden="true"></i>` : '<i class="card-dot sw-none" aria-hidden="true"></i>'}
-       <span class="row-text"><span class="row-title">${esc(label)}</span>${sub ? `<span class="row-sub">${esc(sub)}</span>` : ''}</span></button>`;
-  const rows = [row('', STRINGS.filterAllCards, '', null)]
-    .concat(cards.map((c) => row(c.id, cardShortLabel(c), c.archived ? STRINGS.archived : '', c.colour)))
-    .concat([row(NO_CARD, STRINGS.cashAndOther, STRINGS.cashAndOtherHelp, null)]);
-  const node = openSheet(STRINGS.filterCardTitle, `<div class="sheet-list" id="fk-list">${rows.join('')}</div>`);
-  node.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-card]');
-    if (!btn) return;
-    closeSheet();
-    setFilter({ card: btn.dataset.card === '' ? null : btn.dataset.card });
+// The user's cards grouped by institution: [{ key, name, cards }]. Cards added by hand group under
+// the issuer as typed (case ignored); cards with no issuer go under "Other cards", listed last.
+function userInstitutions() {
+  const byKey = new Map();
+  state.cards.forEach((c) => {
+    const typed = c.issuer.trim();
+    const key = typed ? fold(typed) : '';
+    if (!byKey.has(key)) byKey.set(key, { key, name: typed || STRINGS.otherCards, cards: [] });
+    byKey.get(key).cards.push(c);
   });
+  const cmp = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' });
+  const list = Array.from(byKey.values()).sort((a, b) => (a.key === '') - (b.key === '') || cmp(a.name, b.name));
+  list.forEach((inst) => inst.cards.sort((a, b) => (a.archived - b.archived) || cmp(cardDisplayName(a), cardDisplayName(b))));
+  return list;
+}
+
+// One institution (two or more cards, all selected) reads as its name; one card as the card's
+// name; cash alone as "Cash & other"; anything more as "3 selected".
+function cardFilterLabel(selected) {
+  if (!selected.length) return STRINGS.filterCard;
+  if (selected.length === 1) {
+    if (selected[0] === NO_CARD) return STRINGS.cashAndOther;
+    const card = cardById(selected[0]);
+    return card ? cardDisplayName(card) : STRINGS.filterCard;
+  }
+  const whole = userInstitutions().find((inst) =>
+    inst.cards.length === selected.length && inst.cards.every((c) => selected.indexOf(c.id) !== -1));
+  return whole ? whole.name : STRINGS.selectedCount(selected.length);
+}
+
+// Card or institution: multi-select. An institution's box selects all of its cards (archived
+// ones too); single cards narrow it; "Cash & other" is every expense with no card.
+function openCardFilterSheet() {
+  const picked = new Set(ui.filters.cards);
+  const rows = userInstitutions().map((inst) =>
+    `<label class="row check-row group-check"><input type="checkbox" data-inst="${esc(inst.key)}" aria-label="${esc(STRINGS.filterWholeInstitution(inst.name))}">
+       ${cardBadgeHtml(inst.cards[0])}<span class="row-text"><span class="row-title">${esc(inst.name)}</span>
+         <span class="row-sub">${esc(STRINGS.cardCount(inst.cards.length))}</span></span></label>` +
+    inst.cards.map((c) =>
+      `<label class="row check-row item-check"><input type="checkbox" data-card="${esc(inst.key)}" value="${esc(c.id)}"${picked.has(c.id) ? ' checked' : ''}>
+         <i class="card-dot sw-${c.colour}" aria-hidden="true"></i>
+         <span class="row-text"><span class="row-title">${esc(cardShortLabel(c))}</span>${c.archived ? `<span class="row-sub">${esc(STRINGS.archived)}</span>` : ''}</span></label>`).join('')).join('') +
+    `<label class="row check-row cash-check"><input type="checkbox" data-cash value="${NO_CARD}"${picked.has(NO_CARD) ? ' checked' : ''}>
+       <i class="card-dot sw-none" aria-hidden="true"></i>
+       <span class="row-text"><span class="row-title">${esc(STRINGS.cashAndOther)}</span><span class="row-sub">${esc(STRINGS.cashAndOtherHelp)}</span></span></label>`;
+  const node = openSheet(STRINGS.filterCardTitle,
+    `<div class="sheet-list" id="fk-list">${rows}</div>
+     <div class="btn-row sticky-actions">
+       <button type="button" class="btn" id="fk-none">${esc(STRINGS.clear)}</button>
+       <button type="button" class="btn primary" id="fk-done">${esc(STRINGS.done)}</button>
+     </div>`);
+  const cardsOf = (key) => $$('#fk-list input[data-card]', node).filter((n) => n.dataset.card === key);
+  const sync = () => $$('#fk-list input[data-inst]', node).forEach((box) => {
+    const items = cardsOf(box.dataset.inst);
+    const on = items.filter((n) => n.checked).length;
+    box.checked = on > 0 && on === items.length;
+    box.indeterminate = on > 0 && on < items.length;
+  });
+  const apply = () => { sync(); setFilter({ cards: $$('#fk-list input[value]:checked', node).map((n) => n.value) }); };
+  sync();
+  $('#fk-list', node).addEventListener('change', (e) => {
+    if (e.target.dataset.inst !== undefined) cardsOf(e.target.dataset.inst).forEach((n) => { n.checked = e.target.checked; });
+    apply();
+  });
+  $('#fk-none', node).addEventListener('click', () => { $$('#fk-list input', node).forEach((n) => { n.checked = false; }); apply(); });
+  $('#fk-done', node).addEventListener('click', closeSheet);
 }
 
 /* ----- Swipe actions ----- */
@@ -2359,7 +2464,7 @@ function openEditSheet(id) {
 }
 
 /* =====================================================================
-   16. View: Summary (group donut, group view, by group, by card, tax time)
+   16. View: Summary (time range, group donut, group view, by group, by card, tax time)
    ===================================================================== */
 // Whole percentages that add up to exactly 100 (largest remainder method).
 function shares(amounts, total) {
@@ -2388,7 +2493,7 @@ function ringSegment(a0, a1) {
 
 // One slice per group that has spending (at most 8). A group keeps its colour from month to month.
 // groups: [{ group, index, cents }] sorted highest first.
-function donutHtml(groups, total) {
+function donutHtml(groups, total, caption) {
   const pcts = shares(groups.map((g) => g.cents), total);
   const start = -Math.PI / 2, full = Math.PI * 2;
   let done = 0;
@@ -2399,7 +2504,7 @@ function donutHtml(groups, total) {
     // A full circle cannot be drawn as one arc, so a lone slice is two halves.
     const d = groups.length === 1 ? ringSegment(a0, a0 + Math.PI) + ringSegment(a0 + Math.PI, a0 + full) : ringSegment(a0, a1);
     const label = STRINGS.sliceLabel(g.group.name, fmtMoney(g.cents), pcts[i]);
-    return `<path class="slice dc${g.index}" d="${d}" tabindex="0" role="button" data-act="open-group" data-group="${g.group.id}"
+    return `<path class="slice gc${g.index}" d="${d}" tabindex="0" role="button" data-act="open-group" data-group="${g.group.id}"
       data-cents="${g.cents}" aria-label="${esc(label)}"><title>${esc(label)}</title></path>`;
   }).join('');
   const money = fmtMoney(total);
@@ -2407,7 +2512,7 @@ function donutHtml(groups, total) {
   return `<svg class="donut" id="donut" viewBox="0 0 ${DONUT.size} ${DONUT.size}" role="group" aria-label="${esc(STRINGS.donutLabel)}">
     ${paths}
     <text class="donut-total${money.length > 10 ? ' small' : ''}" id="donut-total" x="${c}" y="${c + 2}" text-anchor="middle" aria-hidden="true">${esc(money)}</text>
-    <text class="donut-sub" x="${c}" y="${c + 22}" text-anchor="middle" aria-hidden="true">${esc(STRINGS.months[ui.month.m])}</text>
+    <text class="donut-sub" x="${c}" y="${c + 22}" text-anchor="middle" aria-hidden="true">${esc(caption)}</text>
   </svg>`;
 }
 
@@ -2489,29 +2594,32 @@ function groupTotals(list) {
   }).filter((g) => g.cents > 0).sort((a, b) => b.cents - a.cents || a.index - b.index);
 }
 
-// One group, opened from the donut: its items with totals, shares of the group and bars.
-function groupViewHtml(groups, total) {
+// One group, opened from the donut: its items with totals, shares of the group and bars,
+// for the month or range on screen. The header accent and the bars use the group's colour.
+function groupViewHtml(groups, total, scope) {
   const group = groupById(ui.summaryGroup);
+  const index = GROUPS.indexOf(group);
   const g = groups.find((x) => x.group.id === group.id);
   const head =
-    `<div class="card" id="group-view" data-group="${group.id}">
+    `<div class="card gc${index}" id="group-view" data-group="${group.id}">
        <button type="button" class="row plain row-action" id="group-back" data-act="close-group">${esc(STRINGS.allGroups)}</button>
        <div class="month-total"><h2 class="group-name" id="group-name"><span aria-hidden="true">${esc(group.emoji)}</span> ${esc(group.name)}</h2>
          <div class="big" id="group-total">${esc(fmtMoney(g ? g.cents : 0))}</div>
-         <div class="sub" id="group-share">${esc(g ? STRINGS.groupShare(Math.round(g.cents * 100 / total), monthLabel(ui.month)) : STRINGS.noExpenses(monthLabel(ui.month)))}</div></div>
+         <div class="sub" id="group-share">${esc(g ? STRINGS.groupShare(Math.round(g.cents * 100 / total), scope.label) : STRINGS.noExpenses(scope.label))}</div></div>
      </div>`;
   if (!g) return head;
   return head + `<div class="section-head"><span>${esc(STRINGS.groupItems(group.name))}</span></div>
-     <div class="card" id="group-items">${shareRowsHtml(itemRowsOf(g), g.cents, 'filter-cat')}</div>`;
+     <div class="card gc${index}" id="group-items">${shareRowsHtml(itemRowsOf(g), g.cents, 'filter-cat')}</div>`;
 }
 
-// By group: one row per group, each opening to its items (shares are of the whole month).
+// By group: one row per group, each opening to its items (shares are of the whole month or range).
+// Each group's bar has the colour of its donut slice.
 function byGroupHtml(groups, total) {
   const pcts = shares(groups.map((g) => g.cents), total);
   return groups.map((g, i) => {
     const open = ui.openGroups.has(g.group.id);
     const label = STRINGS.sliceLabel(g.group.name, fmtMoney(g.cents), pcts[i]);
-    return `<div class="grp" data-group="${g.group.id}">
+    return `<div class="grp gc${g.index}" data-group="${g.group.id}">
       <button type="button" class="cat-row grp-row" data-act="toggle-group" data-ref="${g.group.id}" aria-expanded="${open}" aria-label="${esc(label)}">
         <span class="cat-line">${emojiLead(g.group.emoji)}<span class="name">${esc(g.group.name)}</span>
           <span class="amt">${esc(fmtMoney(g.cents))}</span><span class="pct">${pcts[i]}%</span>${ICONS.chev}</span>
@@ -2522,8 +2630,63 @@ function byGroupHtml(groups, total) {
   }).join('');
 }
 
+/* ----- Time range: this month's view, or a rolling 3 or 12 calendar months ending with the current one ----- */
+const RANGES = ['month', '3', '12'];
+
+function rangeMonths(count) {
+  const now = currentMonth();
+  return Array.from({ length: count }, (_, i) => shiftMonth(now, i - (count - 1)));
+}
+
+// "Sep – Nov 2026", or "Dec 2025 – Nov 2026" across a year end. Takes 'YYYY-MM' strings.
+function rangeLabelOf(from, to) {
+  const part = (ym) => ({ y: Number(ym.slice(0, 4)), name: STRINGS.monthsShort[Number(ym.slice(5, 7)) - 1] });
+  const a = part(from), b = part(to);
+  return a.y === b.y ? `${a.name} – ${b.name} ${b.y}` : `${a.name} ${a.y} – ${b.name} ${b.y}`;
+}
+
+// What Summary is showing: the expenses, a label, and the History filter that matches it.
+function summaryScope() {
+  if (ui.range === 'month') {
+    return { range: false, label: monthLabel(ui.month), list: expensesInMonth(ui.month), filter: { month: monthCopy() } };
+  }
+  const months = rangeMonths(Number(ui.range));
+  const from = monthPrefix(months[0]), to = monthPrefix(months[months.length - 1]);
+  const list = state.expenses.filter((e) => e.date.slice(0, 7) >= from && e.date.slice(0, 7) <= to);
+  return { range: true, months, label: rangeLabelOf(from, to), list, filter: { range: { from, to } } };
+}
+
+// One bar per month of the range; the current month is marked "so far". Tapping a bar opens that month.
+function monthlyBarsHtml(months, list) {
+  const totals = new Map(months.map((m) => [monthPrefix(m), 0]));
+  list.forEach((e) => { const key = e.date.slice(0, 7); totals.set(key, totals.get(key) + e.amountCents); });
+  const max = Math.max.apply(null, Array.from(totals.values()));
+  const W = 320, top = 6, plot = 92, H = top + plot, axis = 28, step = W / months.length, barW = Math.min(36, step * 0.62);
+  const current = monthPrefix(currentMonth());
+  const bars = months.map((m, i) => {
+    const key = monthPrefix(m), cents = totals.get(key), now = key === current;
+    const x = i * step, bx = x + (step - barW) / 2, mid = (x + step / 2).toFixed(2);
+    const h = max > 0 ? (cents / max) * plot : 0;
+    const label = STRINGS.barLabel(monthLabel(m), fmtMoney(cents));
+    return `<g class="monthbar${now ? ' current' : ''}" tabindex="0" role="button" data-act="open-month" data-month="${key}" data-cents="${cents}" aria-label="${esc(label)}">
+      <title>${esc(label)}</title>
+      <rect class="hit" x="${x.toFixed(2)}" y="0" width="${step.toFixed(2)}" height="${H + axis}"/>
+      <rect class="bar-empty" x="${bx.toFixed(2)}" y="${H - 1.5}" width="${barW.toFixed(2)}" height="1.5" rx=".75"/>
+      <rect class="mbar" x="${bx.toFixed(2)}" y="${(H - h).toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(3, h / 2).toFixed(2)}"/>
+      <text class="axis" x="${mid}" y="${H + 12}" text-anchor="middle" aria-hidden="true">${esc(STRINGS.monthsShort[m.m])}</text>
+      ${now ? `<text class="axis so-far" x="${mid}" y="${H + 22}" text-anchor="middle" aria-hidden="true">${esc(STRINGS.soFar)}</text>` : ''}</g>`;
+  }).join('');
+  return `<svg class="daily monthly" id="monthly-bars" viewBox="0 0 ${W} ${H + axis}" role="group" aria-label="${esc(STRINGS.monthlyLabel)}">${bars}</svg>`;
+}
+
+function rangeSelectorHtml() {
+  return `<div class="seg" id="range-seg" role="group" aria-label="${esc(STRINGS.rangeLabel)}">${RANGES.map((r) =>
+    `<button type="button" class="seg-btn" data-act="set-range" data-range="${r}" aria-pressed="${ui.range === r}">${esc(STRINGS.ranges[r])}</button>`).join('')}</div>`;
+}
+
 VIEWS.summary = function renderSummary() {
-  const list = expensesInMonth(ui.month);
+  const scope = summaryScope();
+  const list = scope.list;
   const total = sumCents(list);
   const groups = groupTotals(list);
   const perCard = new Map();
@@ -2534,9 +2697,9 @@ VIEWS.summary = function renderSummary() {
 
   let body;
   if (ui.summaryGroup) {
-    body = groupViewHtml(groups, total);
+    body = groupViewHtml(groups, total, scope);
   } else if (!groups.length) {
-    body = `<div class="empty"><p>${esc(STRINGS.noExpenses(monthLabel(ui.month)))}</p></div>`;
+    body = `<div class="empty"><p>${esc(STRINGS.noExpenses(scope.label))}</p></div>`;
   } else {
     const cardRows = Array.from(perCard.entries()).map(([key, cents]) => {
       const card = key === NO_CARD ? null : cardById(key);
@@ -2547,12 +2710,16 @@ VIEWS.summary = function renderSummary() {
         last: key === NO_CARD
       };
     }).sort((a, b) => (a.last - b.last) || b.cents - a.cents);
+    // Month view: the day-by-day chart. Range views: one bar per month instead.
+    const chart = scope.range
+      ? `<h2 class="chart-title">${esc(STRINGS.monthlyTitle)}</h2>${monthlyBarsHtml(scope.months, list)}
+         <p class="footnote">${esc(STRINGS.chartHintRange)}</p>`
+      : `<h2 class="chart-title">${esc(STRINGS.dailyTitle)}</h2>${dailyBarsHtml(list)}
+         <p class="footnote">${esc(STRINGS.chartHint)}</p>`;
     body =
       `<div class="card charts${ui.drawCharts ? ' draw' : ''}" id="charts">
-         <div class="donut-wrap">${donutHtml(groups, total)}</div>
-         <h2 class="chart-title">${esc(STRINGS.dailyTitle)}</h2>
-         ${dailyBarsHtml(list)}
-         <p class="footnote">${esc(STRINGS.chartHint)}</p>
+         <div class="donut-wrap">${donutHtml(groups, total, scope.range ? STRINGS.monthsCount(scope.months.length) : STRINGS.months[ui.month.m])}</div>
+         ${chart}
        </div>
        <div class="section-head"><span>${esc(STRINGS.byGroup)}</span></div>
        <div class="card" id="by-group">${byGroupHtml(groups, total)}</div>
@@ -2560,17 +2727,24 @@ VIEWS.summary = function renderSummary() {
        <div class="card" id="by-card">${shareRowsHtml(cardRows, total, 'filter-card-row')}</div>` : ''}`;
   }
   ui.drawCharts = false;
-  const tax = taxTotalsForYear(ui.month.y);
-  el.view.innerHTML =
-    `<div class="page">${monthSwitchHtml()}
+  const head = scope.range
+    ? `<div class="range-head"><span class="month-label" id="range-label">${esc(scope.label)}</span></div>
        <div class="month-total"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div>
-         <div class="sub" id="summary-count">${esc(STRINGS.expenseCount(list.length))}</div></div>
+         <div class="sub" id="summary-count">${esc(STRINGS.expenseCount(list.length))}</div>
+         <div class="sub" id="range-avg">${esc(STRINGS.rangeAverage(fmtMoney(Math.round(total / scope.months.length))))}</div></div>`
+    : `${monthSwitchHtml()}
+       <div class="month-total"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div>
+         <div class="sub" id="summary-count">${esc(STRINGS.expenseCount(list.length))}</div></div>`;
+  // Tax time is by calendar year, so it belongs to the Month view only.
+  const tax = scope.range || ui.summaryGroup ? null : taxTotalsForYear(ui.month.y);
+  el.view.innerHTML =
+    `<div class="page">${rangeSelectorHtml()}${head}
        ${body}
-       ${ui.summaryGroup ? '' : `<div class="card" id="tax-card">
+       ${tax ? `<div class="card" id="tax-card">
          <h2 class="card-title">${esc(STRINGS.taxTime(ui.month.y))}</h2>
          ${TAX_TAGS.map((tag) => `<div class="kv" data-tax="${tag}"><span>${esc(STRINGS.taxRows[tag])}</span><span class="v">${esc(fmtMoney(tax[tag]))}</span></div>`).join('')}
          <p class="footnote" id="tax-footnote">${esc(STRINGS.taxFootnote)}</p>
-       </div>`}
+       </div>` : ''}
      </div>`;
 };
 
@@ -2864,7 +3038,7 @@ function openCardForm(opts) {
     $('#cf-confirm-remove', node).addEventListener('click', () => {
       const outcome = removeCard(card.id);
       if (ui.draft.cardId === card.id) ui.draft.cardId = null;
-      if (outcome === 'deleted' && ui.filters.card === card.id) ui.filters.card = null;
+      if (outcome === 'deleted') ui.filters.cards = ui.filters.cards.filter((id) => id !== card.id);
       closeSheet();
       render();
       showToast(outcome === 'archived' ? STRINGS.cardArchived : STRINGS.cardRemoved, { ms: 2500 });
@@ -3327,9 +3501,10 @@ const monthCopy = () => ({ y: ui.month.y, m: ui.month.m });
 
 const ACTIONS = {
   tab: (t) => switchTab(t.dataset.tab),
-  chip: (t) => saveDraftTo(t.dataset.cat),
-  usual: (t) => saveDraftTo(t.dataset.cat),
-  'chip-more': () => { if (typedToCents(ui.amount) <= 0) nudgeAmount(); else openAllCategoriesSheet(); },
+  chip: (t) => selectCategory(t.dataset.cat, true),
+  usual: (t) => selectCategory(t.dataset.cat, true),
+  'chip-more': openAllCategoriesSheet,
+  save: saveDraft,
   details: openDetailsSheet,
   recent: openRecentSheet,
   month: (t) => { ui.month = shiftMonth(ui.month, Number(t.dataset.delta)); if (ui.tab === 'history') renderHistoryBody(); else VIEWS[ui.tab](); },
@@ -3340,14 +3515,25 @@ const ACTIONS = {
   'filter-loc': () => setFilter({ hasLocation: !ui.filters.hasLocation }),
   'filter-day-clear': () => setFilter({ day: null }),
   'filter-month-clear': () => setFilter({ month: null }),
+  'filter-range-clear': () => setFilter({ range: null }),
   'filter-clear': clearFilters,
   // Summary: a donut slice opens its group inside Summary; a By group row opens in place.
   'open-group': (t) => { ui.summaryGroup = t.dataset.group; VIEWS.summary(); el.view.scrollTop = 0; },
   'close-group': () => { ui.summaryGroup = null; VIEWS.summary(); el.view.scrollTop = 0; },
   'toggle-group': (t) => { const id = t.dataset.ref; if (ui.openGroups.has(id)) ui.openGroups.delete(id); else ui.openGroups.add(id); VIEWS.summary(); },
-  // Summary taps on an item, card or day: History with that filter, for the month on screen (a day needs no month).
-  'filter-cat': (t) => openHistoryFiltered({ cats: [t.dataset.ref], month: monthCopy() }),
-  'filter-card-row': (t) => openHistoryFiltered({ card: t.dataset.ref, month: monthCopy() }),
+  // Summary taps on an item, card or day: History with that filter, for the month or range on screen (a day needs neither).
+  'filter-cat': (t) => openHistoryFiltered(Object.assign({ cats: [t.dataset.ref] }, summaryScope().filter)),
+  'filter-card-row': (t) => openHistoryFiltered(Object.assign({ cards: [t.dataset.ref] }, summaryScope().filter)),
+  'set-range': (t) => { if (RANGES.indexOf(t.dataset.range) === -1) return; ui.range = t.dataset.range; ui.drawCharts = true; VIEWS.summary(); el.view.scrollTop = 0; },
+  // a bar of the monthly chart: that month, in Month view
+  'open-month': (t) => {
+    ui.month = { y: Number(t.dataset.month.slice(0, 4)), m: Number(t.dataset.month.slice(5, 7)) - 1 };
+    ui.range = 'month';
+    ui.summaryGroup = null;
+    ui.drawCharts = true;
+    VIEWS.summary();
+    el.view.scrollTop = 0;
+  },
   'filter-day': (t) => openHistoryFiltered({ day: t.dataset.day }),
   'card-add': openAddCardSheet,
   'card-edit': (t) => { const card = cardById(t.dataset.id); if (card) openCardForm({ mode: 'edit', card }); },
@@ -3397,6 +3583,7 @@ document.addEventListener('keydown', (e) => {
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
   if (/^\d$/.test(e.key) || e.key === '.') { e.preventDefault(); pressKey(e.key); }
   else if (e.key === 'Backspace') { e.preventDefault(); pressKey('back'); }
+  else if (e.key === 'Enter' && e.target === document.body) { e.preventDefault(); saveDraft(); }
 });
 
 // Another tab changed the data: reload it.
@@ -3407,7 +3594,7 @@ window.addEventListener('storage', (e) => {
   refreshChips();
   closeSheet();
   if (ui.draft.cardId && !cardById(ui.draft.cardId)) ui.draft.cardId = null;
-  if (ui.filters.card && ui.filters.card !== NO_CARD && !cardById(ui.filters.card)) ui.filters.card = null;
+  ui.filters.cards = ui.filters.cards.filter((id) => id === NO_CARD || cardById(id));
   render();
   loadBadges();
 });

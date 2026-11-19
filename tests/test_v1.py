@@ -85,6 +85,7 @@ def test_02_add_expense(app):
     app.type_amount("12.34")
     assert app.amount() == "$12.34"
     app.chip("Groceries").click()
+    app.save()
     assert app.toast().inner_text() == "Saved $12.34 · Groceries"
     assert app.ui.locator(".toast-undo").is_visible()
     assert app.ui.locator("#toast-region").get_attribute("aria-live") == "polite"
@@ -164,14 +165,16 @@ def test_05_keypad_rules(app):
     app.page.mouse.up()
     assert app.amount() == "$0"
 
-    # zero amount cannot be saved (force: Playwright refuses to click aria-disabled elements; a finger does not)
-    assert app.chip("Groceries").get_attribute("aria-disabled") == "true"
-    app.chip("Groceries").click(force=True)
-    assert app.ui.locator("#amount-hint").inner_text() == "Enter an amount first"
+    # zero amount cannot be saved (v2.3: a chip only selects; the Save button stays disabled.
+    # force: Playwright refuses to click aria-disabled elements; a finger does not)
+    app.chip("Groceries").click()
+    save = app.ui.locator("#btn-save")
+    assert save.get_attribute("aria-disabled") == "true"
+    assert app.ui.locator("#save-hint").inner_text() == "Enter an amount"
+    save.click(force=True)
     app.type_amount("0.00")
-    app.chip("Groceries").click(force=True)
-    app.ui.locator(".chip-more").click(force=True)
-    assert app.ui.locator("#sheet-root").is_hidden()
+    assert save.get_attribute("aria-disabled") == "true"
+    save.click(force=True)
     assert app.expenses() == []
     assert app.toast().count() == 0
 
@@ -437,6 +440,7 @@ def test_10_restore(make_app):
     src.type_amount("88")
     src.ui.locator(".chip-more").click()
     src.ui.locator('#all-categories .row:has-text("Vet")').click()
+    src.save()
     text = copied_csv(src)
     original = src.expenses()
     assert len(original) == 11
@@ -535,6 +539,7 @@ def test_11_categories(app):
     assert "Medical" in item.locator(".badge").inner_text()
     assert app.ui.locator('#all-categories .row:has-text("Donations") .badge').inner_text() == "Donation"
     item.click()
+    app.save()
     assert app.toast().inner_text() == "Saved $60.00 · Physio"
 
     # counts in Tax time together with the built-in medical category
@@ -542,6 +547,7 @@ def test_11_categories(app):
     app.type_amount("25.50")
     app.ui.locator(".chip-more").click()
     app.ui.locator('#all-categories [data-pick="misc.medical"]').click()
+    app.save()
     app.tab("summary")
     assert cents(app.ui.locator('#tax-card [data-tax="medical"] .v').inner_text()) == 6000 + 2550
 
@@ -854,10 +860,13 @@ ADD_FITS = """
 () => {
   const v = document.getElementById('view'), bad = [];
   if (v.scrollHeight > v.clientHeight + 1) bad.push('Add needs scrolling: ' + v.scrollHeight + '>' + v.clientHeight);
-  document.querySelectorAll('.key').forEach((k) => { if (k.getBoundingClientRect().height < 56) bad.push('key under 56px'); });
+  // v2.3 lets keys and chips shrink on short phones, down to the 44 px tap target, to make room for Save
+  document.querySelectorAll('.key, .chip').forEach((k) => { if (k.getBoundingClientRect().height < 44) bad.push('key or chip under 44px'); });
+  const save = document.getElementById('btn-save').getBoundingClientRect();
+  if (save.height < 44 || save.bottom > document.querySelector('.tabbar').getBoundingClientRect().top + 0.5) bad.push('Save button not fully above the tab bar');
   const tab = document.querySelector('.tabbar').getBoundingClientRect();
   const pad = document.getElementById('keypad').getBoundingClientRect();
-  if (pad.bottom > tab.top + 0.5) bad.push('keypad under tab bar');
+  if (pad.bottom > save.top + 0.5) bad.push('keypad under the Save button');
   if (getComputedStyle(document.querySelector('.key')).touchAction !== 'manipulation') bad.push('touch-action');
   return bad;
 }
@@ -896,6 +905,7 @@ def test_15_layout(make_app, size, scheme):
     check("all categories sheet")
     app.page.keyboard.press("Escape")
     app.chip("Groceries").click()
+    app.save()
     check("toast")
     t = app.ui.locator(".toast").bounding_box()
     assert t["x"] >= 0 and t["x"] + t["width"] <= size[0] and t["y"] >= 0
@@ -977,6 +987,7 @@ def test_18_chip_order_is_frozen_for_the_session(app):
         app.type_amount(amount)
         app.ui.locator(".chip-more").click()
         app.ui.locator('#all-categories .row:has-text("Travel / Vacation")').click()
+        app.save()
         assert chips() == start
     assert len(app.expenses()) == 3
     app.ui.locator(".toast-undo").click()                 # undo does not reorder either
@@ -1045,6 +1056,7 @@ def test_20_category_formula_prefix_round_trip(make_app):
     src.type_amount("15")
     src.ui.locator(".chip-more").click()
     src.ui.locator('#all-categories .row:has-text("=Test")').click()
+    src.save()
     text = copied_csv(src)
     row = parse_csv(text)[1]
     assert row[COL["category"]] == "'=Test" and row[COL["category_group"]] == "Miscellaneous" and row[COL["tax_tag"]] == "donation"

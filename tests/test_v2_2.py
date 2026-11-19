@@ -45,6 +45,7 @@ def test_01_fresh_state_groups_items_and_chips(app):
     order = app.ui.locator("#all-categories > *").evaluate_all("(els) => els.map((e) => e.dataset.group || e.dataset.pick.split('.')[0])")
     assert order == sorted(order, key=[g[0] for g in GROUPS].index)                    # each item sits under its own heading
     app.ui.locator('#all-categories [data-pick="insurance.life-insurance"]').click()
+    app.save()
     assert app.toast().inner_text() == "Saved $9.00 · Life Insurance"
     assert app.expenses()[0]["categoryId"] == "insurance.life-insurance"
     app.tab("history")
@@ -65,9 +66,10 @@ def test_01b_confusable_chips_show_their_group(app):
     assert app.ui.locator('.chip[data-cat="housing.gas-hydro"] .chip-group').inner_text() == "Housing"
     assert app.ui.locator('.chip[data-cat="transportation.gas-diesel"] .chip-group').inner_text() == "Transportation"
     assert app.ui.locator("#chips .chip-group").count() == 2
-    assert app.ui.locator('.chip[data-cat="housing.gas-hydro"]').get_attribute("aria-label") == "Save to Gas & Hydro, Housing"
+    assert app.ui.locator('.chip[data-cat="housing.gas-hydro"]').get_attribute("aria-label") == "Gas & Hydro, Housing"
     app.type_amount("5")
     app.ui.locator('.chip[data-cat="housing.gas-hydro"]').click()
+    app.save()
     assert app.toast().inner_text() == "Saved $5.00 · Gas & Hydro"
 
 
@@ -189,7 +191,7 @@ def test_03_summary_by_group(app):
     assert cents(app.ui.locator("#donut-total").text_content()) == total
     # a group keeps its colour whatever its rank
     colour = lambda group: app.ui.locator(f'#donut .slice[data-group="{group}"]').get_attribute("class").split()[1]
-    assert (colour("housing"), colour("debt"), colour("food"), colour("insurance")) == ("dc0", "dc1", "dc3", "dc7")
+    assert (colour("housing"), colour("debt"), colour("food"), colour("insurance")) == ("gc0", "gc1", "gc3", "gc7")
 
     # By group: one row per group with amount, share and bar; each opens to its items
     assert app.ui.locator("#view .section-head").all_inner_texts() == ["By group"]
@@ -389,6 +391,7 @@ def test_06_categories_screen(app):
     order = app.ui.locator("#all-categories > *").evaluate_all("(els) => els.map((e) => e.dataset.group || e.querySelector('.row-title').textContent)")
     assert order[order.index("food") + 1:order.index("transportation")] == ["Groceries", "Restaurant / Take-Out", "Bakery"]
     app.ui.locator(f'#all-categories [data-pick="{bakery["id"]}"]').click()
+    app.save()
     assert app.toast().inner_text() == "Saved $6.50 · Bakery"
 
     # rename, change group, change tax tag
@@ -577,11 +580,11 @@ def test_07b_badges_sections_and_other_places(app):
 # ---------------------------------------------------------------- 8
 def test_08_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.2';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
-    assert "version: '0.2.2'," in source("app.js") and not re.search(r"0\.2\.[01]\b", sw + source("app.js"))
+    assert "const VERSION = '0.2.3';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "version: '0.2.3'," in source("app.js") and not re.search(r"0\.2\.[012]\b", sw + source("app.js"))
     app = make_app(service_workers="allow", cards=None)
-    wait_cached(app.page, cache="ds-0.2.2")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.2"]
+    wait_cached(app.page, cache="ds-0.2.3")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.3"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.2"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.3"
     assert app.console_errors == []

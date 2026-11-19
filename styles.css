@@ -130,7 +130,6 @@ h1, h2, h3, p { margin: 0; }
   font-variant-numeric: tabular-nums; max-width: 100%; white-space: nowrap;
 }
 .amount.is-zero { color: var(--text-2); }
-.amount-hint { height: 20px; font-size: 14px; color: var(--text-2); }
 .details-row {
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px; text-align: left;
   background: var(--surface); border-radius: 14px; padding: 7px 10px 7px 14px; margin-bottom: 10px;
@@ -155,7 +154,6 @@ h1, h2, h3, p { margin: 0; }
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
   overflow-wrap: anywhere;
 }
-.chip[aria-disabled="true"] { opacity: .45; }
 .chip-more .chip-emoji { color: var(--accent); font-weight: 700; }
 
 .keypad {
@@ -380,14 +378,19 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 }
 .usual-pill:active { transform: scale(.98); }
 .usual-pill span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.usual-pill[aria-disabled="true"] { opacity: .55; }
 /* Short phones: make room for the "Usual" pill without scrolling. */
-@media (max-height: 700px) {
-  .amount { font-size: 42px; }
-  .amount-wrap { min-height: 66px; }
+/* Shorter phones: the amount, chips, keypad and Save button all fit without scrolling,
+   also when the "Usual" pill shows. Tap targets stay at 44 px or more. */
+@media (max-height: 780px) {
+  .amount { font-size: 38px; }
+  .amount-wrap { min-height: 50px; }
   .details-line, .usual-pill { margin-bottom: 8px; }
-  .chip { height: 58px; }
-  .chip-emoji { font-size: 18px; }
+  .chips { margin-bottom: 8px; }
+  .chip { height: 54px; }
+  .chip-emoji { font-size: 16px; }
+  .keypad { gap: 5px; }
+  .key { height: 44px; font-size: 22px; }
+}
 }
 
 /* ===== v2: History ===== */
@@ -427,8 +430,13 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .slice { stroke: var(--surface); stroke-width: 1.5; cursor: pointer; outline: none; }
 .slice:active { opacity: .75; }
 .slice:focus-visible, .daybar:focus-visible .dbar { stroke: var(--text); stroke-width: 2.5; }
-.dc0 { fill: var(--c-teal); } .dc1 { fill: var(--c-blue); } .dc2 { fill: var(--c-orange); } .dc3 { fill: var(--c-purple); }
-.dc4 { fill: var(--c-green); } .dc5 { fill: var(--c-rose); } .dc6 { fill: var(--c-indigo); } .dc7 { fill: var(--c-slate); }
+/* One fixed colour per budget group (by group, not by rank), light and dark pairs from the palette.
+   The donut slice, the By group bar, the group view accent and its item bars all read --gc. */
+.gc0 { --gc: var(--c-teal); } .gc1 { --gc: var(--c-blue); } .gc2 { --gc: var(--c-orange); } .gc3 { --gc: var(--c-purple); }
+.gc4 { --gc: var(--c-green); } .gc5 { --gc: var(--c-rose); } .gc6 { --gc: var(--c-indigo); } .gc7 { --gc: var(--c-slate); }
+.slice { fill: var(--gc); }
+.grp .bar > i, #group-items .bar > i { background: var(--gc); }
+#group-view { border-top: 5px solid var(--gc); }
 .donut-total { font-size: 21px; font-weight: 600; fill: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .donut-total.small { font-size: 15px; }
 .donut-sub { font-size: 11px; fill: var(--text-2); }
@@ -518,9 +526,43 @@ button.cat-row:active { background: var(--surface-2); }
 .option .ibadge { min-height: 0; padding: 0 6px; border: 0; border-radius: 7px; color: #FFFFFF; font-size: 11px; font-weight: 700; }   /* not an option face */
 .card-tile .card-swatch { width: 5px; height: 36px; border-radius: 3px; margin-right: -2px; }   /* the card's own colour, as an accent */
 
+/* ===== v2.3: Add selects a category, then Save ===== */
+.amount { padding: 1px 14px; border-radius: 14px; outline: 2px solid transparent; outline-offset: 0; }
+.amount.missing { outline-color: var(--danger); }
+.chips { border-radius: 14px; outline: 2px solid transparent; outline-offset: 3px; }
+.chips.missing { outline-color: var(--danger); }
+.chip { position: relative; }
+.chip.selected { background: var(--accent); color: var(--on-accent); }
+.chip.selected .chip-group { color: inherit; }
+.chip-check { position: absolute; top: 3px; right: 6px; font-size: 12px; font-weight: 700; line-height: 1.2; }
+.usual-pill[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.row[data-pick][aria-pressed="true"] .row-title { color: var(--accent); font-weight: 600; }
+.save-hint { flex: none; height: 18px; margin-top: 6px; text-align: center; font-size: 13px; line-height: 18px; color: var(--text-2); }
+.save-btn {
+  flex: none; width: 100%; min-height: 48px; margin-top: 2px; border-radius: 14px;
+  font-size: 17px; font-weight: 600; background: var(--surface-2); color: var(--text-2); transition: transform .08s;
+}
+.save-btn.ready { background: #1B7F3B; color: #FFFFFF; }          /* green, 5:1 against white text */
+.save-btn.ready:active { transform: scale(.98); }
+
+/* ===== v2.3: Summary time range ===== */
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; margin-bottom: 6px; border-radius: 14px; background: var(--surface-2); }
+.seg-btn { min-height: 44px; border-radius: 11px; font-size: 14px; font-weight: 500; color: var(--text-2); }
+.seg-btn[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.range-head { display: flex; align-items: center; justify-content: center; min-height: 44px; }
+.monthbar { cursor: pointer; outline: none; }
+.monthbar .hit { fill: transparent; }
+.monthbar .mbar { fill: var(--accent); opacity: .5; }
+.monthbar.current .mbar { opacity: 1; }
+.monthbar:active .mbar { opacity: .8; }
+.monthbar:focus-visible .mbar { stroke: var(--text); stroke-width: 2.5; }
+.monthbar.current .axis { fill: var(--text); font-weight: 600; }
+.so-far { font-size: 7.5px; }
+.charts.draw .mbar { transform-box: fill-box; transform-origin: 50% 100%; animation: bar-in .3s ease-out; }
+
 /* All motion is off for people who ask for less of it. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .toast-check path { stroke-dashoffset: 0; }
-  .key:active, .chip:active, .recent-btn:active, .usual-pill:active { transform: none; }
+  .key:active, .chip:active, .recent-btn:active, .usual-pill:active, .save-btn.ready:active { transform: none; }
 }

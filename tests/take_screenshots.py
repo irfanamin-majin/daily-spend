@@ -23,6 +23,8 @@ CARDS = [
     make_card("card-c", "KOHO Prepaid Mastercard", kind="prepaid", issuer="KOHO", networks=("Mastercard",), colour="indigo",
               catalogue_id="koho-prepaid-mastercard"),
     make_card("card-d", "Old store card", issuer="", networks=(), colour="slate", archived=True),
+    make_card("card-e", "TD Cash Back Visa Infinite Card", issuer="TD", networks=("Visa",), last4="7788", colour="blue",
+              catalogue_id="td-cash-back-visa-infinite"),
 ]
 CARD_FOR = {"credit": "card-a", "debit": "card-b"}
 
@@ -38,6 +40,12 @@ def sample_state():
     rows.append(("2026-11-13", 475, "dining", "debit", "Tim Hortons", "", "card-b", PIN))
     rows.append(("2026-11-06", 14200, "insurance.health-dental-insurance", "pad", "Sun Life", "", None, None))
     rows.append(("2026-11-04", 9800, "transportation.car-insurance", "pad", "", "", None, None))
+    rows.append(("2026-11-11", 5640, "groceries", "credit", "Safeway", "", "card-e", None))
+    rows.append(("2026-10-17", 12999, "shopping", "credit", "Best Buy", "", "card-e", None))
+    rows += [("2026-09-01", 185000, "housing", "etransfer", "", "Rent"), ("2026-09-12", 21050, "groceries", "debit", "Co-op", "", "card-b"),
+             ("2026-08-01", 185000, "housing", "etransfer", "", "Rent"), ("2026-08-20", 64000, "travel", "credit", "WestJet", "", "card-a"),
+             ("2026-07-01", 185000, "housing", "etransfer", "", "Rent"), ("2026-06-01", 185000, "housing", "etransfer", "", "Rent"),
+             ("2026-06-15", 33000, "car", "credit", "Toyota", "", "card-a"), ("2026-10-01", 185000, "housing", "etransfer", "", "Rent")]
     return make_state(rows, cards=CARDS)
 
 
@@ -79,13 +87,21 @@ def main():
                 ui.locator("#mig-ok").click()
 
                 app.seed(sample_state())
-                # Add
+                # Add: empty (red outlines, grey Save), amount only, ready (green Save), a pick from More
                 shot("add")
-                app.type_amount("1")
+                shot("add-1-empty")
+                app.type_amount("23.40")
+                shot("add-2-amount-only")
+                app.chip("Groceries").click()
+                shot("add-3-ready")
                 ui.locator(".chip-more").click()
                 shot("add-more-sheet-groups")
-                app.page.keyboard.press("Escape")
-                ui.locator('[data-key="back"]').click()
+                ui.locator('#all-categories [data-pick="insurance.life-insurance"]').scroll_into_view_if_needed()
+                ui.locator('#all-categories [data-pick="insurance.life-insurance"]').click()
+                shot("add-4-selected-from-more")
+                app.chip("Life Insurance").click()
+                for _ in range(5):
+                    ui.locator('[data-key="back"]').click()
                 app.type_amount("4.75")
                 ui.locator("#details-row").click()
                 ui.locator('#d-pay label:has-text("TD Access")').click()
@@ -99,6 +115,7 @@ def main():
                 ui.locator("#d-done").click()
                 shot("add-usual-pill")
                 ui.locator("#usual-pill").click()
+                app.save()
                 shot("add-saved-toast")
                 ui.locator(".toast-undo").click()
                 app.page.wait_for_timeout(2300)
@@ -123,8 +140,15 @@ def main():
                 shot("history-category-filter-sheet")
                 ui.locator("#fc-done").click()
                 ui.locator("#f-card").click()
-                ui.locator('#fk-list .row:has-text("Cobalt")').click()
+                ui.locator('#fk-list .item-check:has-text("Cobalt")').click()
+                ui.locator("#fk-done").click()
                 shot("history-filters")
+                ui.locator("#f-clear").click()
+                ui.locator("#f-card").click()
+                ui.locator('#fk-list input[data-inst="td"]').check()
+                shot("history-card-or-institution-sheet")
+                ui.locator("#fk-done").click()
+                shot("history-filtered-by-institution")
                 ui.locator("#f-clear").click()
                 ui.locator('.row[data-id="seed-000"]').click()
                 ui.locator("#e-maps").scroll_into_view_if_needed()
@@ -132,7 +156,18 @@ def main():
                 app.page.keyboard.press("Escape")
                 # Summary
                 app.tab("summary")
+                ui.locator('#range-seg [data-range="3"]').click()
+                shot("summary-3-months")
+                ui.locator('#range-seg [data-range="12"]').click()
+                shot("summary-12-months")
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('by-group').offsetTop - 60; }")
+                shot("summary-12-months-by-group")
+                ui.locator('#range-seg [data-range="month"]').click()
                 shot("summary-charts")
+                shot("summary-month-matched-colours")
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('by-group').offsetTop - 300; }")
+                shot("summary-month-by-group")
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = 0; }")
                 ui.locator('#donut .slice[data-group="food"]').dispatch_event("click")
                 shot("summary-group-view")
                 ui.locator("#group-back").click()
@@ -174,6 +209,13 @@ def main():
                 shot("picker-by-hand")
                 ui.locator("[data-sheet-close]").click()
                 app.close()
+            # one Add screen on a small phone (375 by 667)
+            small = App(browser, base, width=375, height=667, reduced_motion="reduce", cards="real")
+            small.seed(sample_state())
+            small.type_amount("23.40")
+            small.chip("Groceries").click()
+            small.page.screenshot(path=os.path.join(out, "add-375x667-light.png"))
+            small.close()
             browser.close()
     finally:
         server.terminate()

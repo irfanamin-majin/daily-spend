@@ -26,7 +26,7 @@ FAILED = "Couldn't get your location. Try again in a moment."
 CALGARY = {"latitude": 51.0447123, "longitude": -114.0718832, "accuracy": 25}
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 MAPS = "https://www.google.com/maps/search/?api=1&query=51.04471,-114.07188"
-CACHE = "ds-0.2.2"
+CACHE = "ds-0.2.3"
 # A location service the test controls: each request waits until the test answers it.
 STUB_GEO = """
   window.__geo = [];
@@ -188,20 +188,20 @@ def test_03_update_ready_banner(browser, tmp_path):
             app.add("9", "Groceries")
             # publish the next version
             sw = (site / "sw.js").read_text()
-            assert "const VERSION = '0.2.2';" in sw
-            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.2';", "const VERSION = '0.2.3';"))
+            assert "const VERSION = '0.2.3';" in sw
+            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.3';", "const VERSION = '0.2.4';"))
             app.reload()                                       # the browser checks for a new worker on navigation
             banner = app.ui.locator("#banner-update")
             banner.wait_for()
             assert "Update ready" in banner.inner_text() and banner.locator("button").inner_text() == "Reload"
             # until Reload is pressed the old version keeps serving and both caches exist
-            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.2", "ds-0.2.3"]
+            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.3", "ds-0.2.4"]
             with app.page.expect_navigation():
                 banner.locator("button").click()
             app.ready()
-            wait_cached(app.page, cache="ds-0.2.3")
+            wait_cached(app.page, cache="ds-0.2.4")
             wait_until(lambda: len(app.page.evaluate("caches.keys()")) == 1)
-            assert app.page.evaluate("caches.keys()") == ["ds-0.2.3"]                 # old cache deleted on activate
+            assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]                 # old cache deleted on activate
             assert app.ui.locator("#banner-update").count() == 0
             assert len(app.expenses()) == 1                                            # data untouched
             assert app.console_errors == []
@@ -245,7 +245,7 @@ def test_04_manifest_and_icons():
     for a in assets:
         assert os.path.isfile(os.path.join(ROOT, "index.html" if a == "./" else a)), a
     assert all(os.path.join("icons", os.path.basename(i["src"])) in [a.replace("/", os.sep) for a in assets] for i in icons)
-    assert "const VERSION = '0.2.2';" in sw and "version: '0.2.2'," in source("app.js")
+    assert "const VERSION = '0.2.3';" in sw and "version: '0.2.3'," in source("app.js")
     assert os.path.isfile(os.path.join(ROOT, ".nojekyll")) and os.path.isfile(os.path.join(ROOT, "README.md"))
     cards = json.loads(source("data/cards-ca.json"))
     assert {"version", "lastChecked", "issuers", "cards"} <= set(cards)
@@ -272,6 +272,7 @@ def test_05a_manual_location_and_maps_link(make_app):
     app.ui.locator("#d-done").click()
     assert "Today · Credit card · 📍" in row.inner_text()
     app.chip("Groceries").click()
+    app.save()
     e = app.expenses()[0]
     assert e["location"]["lat"] == 51.04471 and e["location"]["lng"] == -114.07188 and e["location"]["accuracyM"] == 25
     assert set(e["location"]) == {"lat", "lng", "accuracyM", "capturedAt"} and e["location"]["capturedAt"].endswith("Z")
@@ -345,6 +346,7 @@ def test_05c_location_denied_and_unavailable(make_app):
     assert app.ui.locator("#d-loc-add").is_visible()         # no retry loop: it waits for another tap
     app.ui.locator("#d-done").click()
     app.chip("Groceries").click()
+    app.save()
     assert app.expenses()[0]["location"] is None
     # Edit sheet shows the same message
     app.tab("history")
@@ -393,6 +395,7 @@ def test_05d_automatic_location(make_app):
     a.ui.locator('#details-row:has-text("📍")').wait_for()
     wait_until(lambda: "· 📍" in a.ui.locator("#details-row").inner_text() and "📍…" not in a.ui.locator("#details-row").inner_text())
     a.chip("Transit").click()
+    a.save()
     assert [e for e in a.expenses() if e["amountCents"] == 500][0]["location"]["accuracyM"] == 25
 
     # the save never waits: the fix arrives after it and is attached to the saved expense
@@ -403,6 +406,7 @@ def test_05d_automatic_location(make_app):
     assert app.page.evaluate("window.__geo.length") == 1
     assert "📍…" in app.ui.locator("#details-row").inner_text()
     app.chip("Groceries").click()
+    app.save()
     assert app.toast().inner_text() == "Saved $7.00 · Groceries"
     assert app.expenses()[0]["location"] is None and app.amount() == "$0"
     assert "📍" not in app.ui.locator("#details-row").inner_text()
@@ -414,12 +418,14 @@ def test_05d_automatic_location(make_app):
     # more than 30 s after the save, a fix is dropped
     app.type_amount("8")
     app.chip("Transit").click()
+    app.save()
     app.page.clock.set_fixed_time("2026-11-15T12:00:31")
     app.page.evaluate("window.__geo[1].ok({ coords: { latitude: 1, longitude: 2, accuracy: 3 } })")
     assert [e for e in app.expenses() if e["amountCents"] == 800][0]["location"] is None
     # undo before the fix arrives: nothing to attach to, no error
     app.type_amount("9")
     app.chip("Transit").click()
+    app.save()
     app.ui.locator(".toast-undo").click()
     app.page.evaluate("window.__geo[2].ok({ coords: { latitude: 1, longitude: 2, accuracy: 3 } })")
     assert len(app.expenses()) == 2
@@ -429,8 +435,10 @@ def test_05d_automatic_location(make_app):
     app.page.evaluate("window.__geo[3].err({ code: 1 })")
     assert app.toast().inner_text() == DENIED
     app.chip("Transit").click()
+    app.save()
     app.type_amount("6")
     app.chip("Transit").click()
+    app.save()
     assert app.page.evaluate("window.__geo.length") == 4
     assert app.console_errors == []
 
@@ -559,15 +567,16 @@ def test_06_cards(app):
     app.ui.locator("#f-clear").click()
     assert app.ui.locator("#month-total").inner_text() == "$66.00"
     app.ui.locator("#f-card").click()
+    # v2.3: institutions with their cards beneath, then Cash & other; multi-select
     assert [t.strip().split("\n")[0] for t in app.ui.locator("#fk-list .row").all_inner_texts()] == [
-        "All cards and other ways", "Cobalt ••1234", "Maple Everyday Debit", "Cash & other"]
-    app.ui.locator('#fk-list .row:has-text("Cash & other")').click()
+        "American Express", "Cobalt ••1234", "Maple Bank", "Maple Everyday Debit", "Cash & other"]
+    app.ui.locator("#fk-list .cash-check").click()
     assert app.ui.locator("#results-total").inner_text() == "$10.00" and app.ui.locator("#f-card").inner_text() == "Cash & other"
-    app.ui.locator("#f-card").click()
-    app.ui.locator('#fk-list .row:has-text("Maple Everyday Debit")').click()
+    app.ui.locator("#fk-none").click()
+    app.ui.locator('#fk-list .item-check:has-text("Maple Everyday Debit")').click()
     assert app.ui.locator("#results-total").inner_text() == "$30.00"
-    app.ui.locator("#f-card").click()
-    app.ui.locator('#fk-list .row:has-text("All cards")').click()
+    app.ui.locator("#fk-none").click()
+    app.ui.locator("#fk-done").click()
     assert app.ui.locator("#f-clear").count() == 0
 
     # editing a card
@@ -877,8 +886,10 @@ def test_10_merchant_remembers_category(app):
     with_merchant("2.25", "Tim Hortons")
     assert app.ui.locator("#usual-pill").count() == 0                              # never seen before
     app.chip("Restaurant / Take-Out").click()
+    app.save()
     with_merchant("3.10", "Tim Hortons")
     app.chip("Restaurant / Take-Out").click()
+    app.save()
     chips_before = app.ui.locator("#chips .chip-name").all_inner_texts()
 
     # typing the merchant (any case) shows the suggestion above the chips, live while the sheet is open
@@ -892,13 +903,13 @@ def test_10_merchant_remembers_category(app):
     assert pill.inner_text() == "Usual: 🍔 Restaurant / Take-Out"
     above = app.page.evaluate("document.getElementById('usual-pill').getBoundingClientRect().bottom <= document.getElementById('chips').getBoundingClientRect().top")
     assert above
-    # with no amount it behaves like a chip: looks disabled, does not save
-    assert pill.get_attribute("aria-disabled") == "true"
-    pill.click(force=True)
-    assert app.ui.locator("#amount-hint").inner_text() == "Enter an amount first" and len(app.expenses()) == 2
-    app.type_amount("4.50")
-    assert pill.get_attribute("aria-disabled") == "false"
+    # v2.3: like a chip it selects the category; nothing is saved until Save is pressed
+    assert pill.get_attribute("aria-pressed") == "false"
     pill.click()
+    assert pill.get_attribute("aria-pressed") == "true" and len(app.expenses()) == 2
+    assert app.ui.locator("#save-hint").inner_text() == "Enter an amount"
+    app.type_amount("4.50")
+    app.save()
     assert app.toast().inner_text() == "Saved $4.50 · Restaurant / Take-Out"
     saved = [e for e in app.expenses() if e["amountCents"] == 450][0]
     assert saved["categoryId"] == "food.restaurant-take-out" and saved["merchant"] == "tim hortons"
@@ -974,7 +985,8 @@ def test_11_search_and_filters(app):
     assert shown() == ["seed-000", "seed-004", "seed-006"] and total() == 3975
     # + card
     app.ui.locator("#f-card").click()
-    app.ui.locator('#fk-list .row:has-text("Rewards")').click()
+    app.ui.locator('#fk-list .item-check:has-text("Rewards")').click()
+    app.ui.locator("#fk-done").click()
     assert shown() == ["seed-000", "seed-006"] and total() == 2475
     # + has location
     app.ui.locator("#f-loc").click()
@@ -998,7 +1010,9 @@ def test_11_search_and_filters(app):
     assert shown() == ["seed-000", "seed-002", "seed-004"] and total() == 475 + 8412 + 1500
     app.ui.locator("#f-loc").click()
     app.ui.locator("#f-card").click()
-    app.ui.locator('#fk-list .row:has-text("Cash & other")').click()
+    app.ui.locator("#fk-none").click()
+    app.ui.locator("#fk-list .cash-check").click()
+    app.ui.locator("#fk-done").click()
     assert shown() == ["seed-004", "seed-005"] and total() == 11400
     app.ui.locator("#f-clear").click()
     app.ui.locator("#f-category").click()
@@ -1462,7 +1476,8 @@ def test_16_layout(make_app, size, scheme):
     app.ui.locator("#fc-done").click()
     app.ui.locator("#f-card").click()
     check("card filter sheet")
-    app.ui.locator('#fk-list .row:has-text("A Card With")').click()
+    app.ui.locator('#fk-list .item-check:has-text("A Card With")').click()
+    app.ui.locator("#fk-done").click()
     check("history with every filter")
     app.ui.locator("#f-clear").click()
     app.tab("summary")
