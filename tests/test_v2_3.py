@@ -6,8 +6,9 @@ from test_v1 import ADD_FITS, source
 from test_v2 import CALGARY, STUB_GEO, drag, tap_inside, wait_cached
 
 DEFAULT_CHIPS = ["Groceries", "Restaurant / Take-Out", "Gas / Diesel", "Shopping", "Transit", "Personal Care", "Medical"]
-RED = {"light": "rgb(196, 39, 28)", "dark": "rgb(255, 107, 97)"}
-GREEN = "rgb(27, 127, 59)"
+RED = {"light": "rgb(239, 68, 68)", "dark": "rgb(255, 107, 97)"}       # --missing (v2.4 light theme)
+GREEN = "rgb(187, 247, 208)"                                           # Save, ready (light): pastel green...
+GREEN_TEXT = "rgb(20, 83, 45)"                                         # ...with dark green text
 CLEAR = "rgba(0, 0, 0, 0)"
 ADD_STATE = """() => {
   const cs = (id) => getComputedStyle(document.getElementById(id));
@@ -46,7 +47,7 @@ def test_01_fresh_add_screen(make_app):
         st = add_state(app)
         assert st["amountOutline"] == [RED[scheme], "solid", "2px"]            # amount is missing
         assert st["chipsOutline"] == [RED[scheme], "solid", "2px"]             # category is missing
-        assert contrast(RED[scheme], st["bg"]) >= 4.5
+        assert contrast(RED[scheme], st["bg"]) >= 3                          # a non-text indicator
         assert st["disabled"] == "true" and st["saveText"] == "Save expense"
         assert st["hint"] == "Enter an amount and choose a category"
         r, g, b = [int(v) for v in re.findall(r"\d+", st["saveBg"])[:3]]
@@ -90,15 +91,18 @@ def test_02_step_by_step(app):
     assert app.expenses() == [] and app.toast().count() == 0 and app.dialogs == []
     # selecting a chip removes the chip-area outline and turns Save green and enabled
     app.chip("Groceries").click()
+    assert app.ui.locator("#btn-save").get_attribute("aria-disabled") == "false"     # enabled at once...
+    app.page.wait_for_timeout(300)                                                   # ...the colour cross-fades (v2.4)
     st = add_state(app)
     assert st["chipsOutline"][0] == CLEAR and st["amountOutline"][0] == CLEAR
-    assert st["disabled"] == "false" and st["saveBg"] == GREEN and st["saveFg"] == "rgb(255, 255, 255)" and st["hint"] == ""
-    assert contrast(GREEN, "rgb(255, 255, 255)") >= 4.5
+    assert st["disabled"] == "false" and st["saveBg"] == GREEN and st["saveFg"] == GREEN_TEXT and st["hint"] == ""
+    assert contrast(GREEN, GREEN_TEXT) >= 4.5
     assert st["selected"] == ["Groceries"]
     chip = app.chip("Groceries")
     assert chip.get_attribute("aria-pressed") == "true" and chip.locator(".chip-check").inner_text() == "✓"
     accent = app.page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()")
-    assert accent == "#0B7A75" and chip.evaluate("(e) => getComputedStyle(e).backgroundColor") == "rgb(11, 122, 117)"
+    assert accent == "#0F766E" and chip.evaluate("(e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color]") == [
+        "rgb(204, 251, 241)", "rgb(17, 94, 89)"]
     assert app.expenses() == [] and app.toast().count() == 0                   # selecting does not save
     # the outline comes back if the amount is cleared, and goes again when refilled
     for _ in range(5):
@@ -368,7 +372,9 @@ GROUP_COLOURS = """() => {
   const out = {};
   document.querySelectorAll('#donut .slice').forEach((s) => {
     const bar = document.querySelector('#by-group .grp[data-group="' + s.dataset.group + '"] .grp-row .bar i');
-    out[s.dataset.group] = { slice: getComputedStyle(s).fill, bar: getComputedStyle(bar).backgroundColor };
+    const rgb = (text) => (text.match(/rgba?[(][^)]*[)]/) || [''])[0];
+    out[s.dataset.group] = { slice: getComputedStyle(s).fill, bar: getComputedStyle(bar).backgroundColor,
+      sliceEdge: getComputedStyle(s).stroke, barEdge: rgb(getComputedStyle(bar).boxShadow) };
   });
   return { card, groups: out, order: Array.from(document.querySelectorAll('#donut .slice')).map((s) => s.dataset.group),
     cardBar: document.querySelector('#by-card .bar i') ? getComputedStyle(document.querySelector('#by-card .bar i')).backgroundColor : null };
@@ -384,8 +390,12 @@ def test_08_group_colours_match(make_app):
         nov = app.page.evaluate(GROUP_COLOURS)
         assert nov["order"] == [g[0] for g in GROUPS] and len(nov["groups"]) == 8
         for group, c in nov["groups"].items():
-            assert c["slice"] == c["bar"], (scheme, group)                      # the bar has the colour of its slice
-            assert contrast(c["bar"], nov["card"]) >= 3, (scheme, group, c["bar"])
+            assert c["slice"] == c["bar"], (scheme, group)                      # the bar has the fill of its slice
+            if scheme == "light":                                               # ...and, in the pastel theme, its edge
+                assert c["sliceEdge"] == c["barEdge"] != c["bar"], (group, c)
+                assert contrast(c["barEdge"], nov["card"]) >= 3, (group, c["barEdge"])
+            else:                                                               # dark, as in 0.2.3: the fill itself carries it
+                assert c["barEdge"] == c["bar"] and contrast(c["bar"], nov["card"]) >= 3, (group, c)
         assert len({c["bar"] for c in nov["groups"].values()}) == 8             # eight distinct colours
         # another month, where the ranks are reversed: every group keeps its colour
         app.ui.locator('[data-act="month"][data-delta="-1"]').click()
@@ -398,7 +408,8 @@ def test_08_group_colours_match(make_app):
         # the group view: header accent and item bars in the group's colour; opened items in By group too
         tap_inside(app, app.ui.locator('#donut .slice[data-group="food"]'))
         view = app.page.evaluate("[getComputedStyle(document.getElementById('group-view')).borderTopColor, getComputedStyle(document.querySelector('#group-items .bar i')).backgroundColor]")
-        assert view == [nov["groups"]["food"]["bar"]] * 2
+        food = nov["groups"]["food"]
+        assert view == [food["barEdge"] if scheme == "light" else food["bar"], food["bar"]]
         app.ui.locator("#group-back").click()
         app.ui.locator('#by-group .grp-row:has-text("Recreation")').click()
         assert app.ui.locator("#by-group .item-row .bar i").evaluate("(e) => getComputedStyle(e).backgroundColor") == nov["groups"]["recreation"]["bar"]
@@ -413,7 +424,7 @@ def test_08b_other_bars_unchanged(app):
     app.tab("summary")
     app.page.wait_for_timeout(400)
     got = app.page.evaluate("[getComputedStyle(document.querySelector('#by-card .bar i')).backgroundColor, getComputedStyle(document.querySelector('#daily-bars .dbar')).fill]")
-    assert got == ["rgb(11, 122, 117)", "rgb(11, 122, 117)"]                   # By card and day-by-day keep the accent colour
+    assert got == ["rgb(15, 118, 110)", "rgb(153, 246, 228)"]                  # By card: accent. Day bars: pastel teal
 
 
 # ---------------------------------------------------------------- 9
@@ -555,11 +566,11 @@ def test_09b_range_with_no_spending(app):
 # ---------------------------------------------------------------- 10
 def test_10_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.3';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
-    assert "version: '0.2.3'," in source("app.js") and not re.search(r"0\.2\.[012]\b", sw + source("app.js"))
-    app = make_app(service_workers="allow", cards=None)
-    wait_cached(app.page, cache="ds-0.2.3")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.3"]
+    assert "const VERSION = '0.2.4';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "version: '0.2.4'," in source("app.js") and not re.search(r"0\.2\.[0123]\b", sw + source("app.js"))
+    app = make_app(service_workers="allow", cards=None, tax=None)
+    wait_cached(app.page, cache="ds-0.2.4")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.3"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.4"
     assert app.console_errors == []

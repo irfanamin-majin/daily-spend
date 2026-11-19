@@ -11,7 +11,7 @@ import pytest
 from conftest import App, SAMPLE_ROWS, cents, make_state
 
 SITE_FILES = ["/", "/styles.css", "/app.js", "/manifest.webmanifest", "/icons/icon-192.png",
-              "/icons/apple-touch-icon.png", "/data/cards-ca.json", "/sw.js"]
+              "/icons/apple-touch-icon.png", "/data/cards-ca.json", "/sw.js", "/tax.js", "/data/tax-ca-2026.json"]
 
 
 def source(name):
@@ -619,7 +619,8 @@ def test_12_delete_all(app):
     assert st["expenses"] == []
     assert len(st["categories"]) == 45 and all(c["builtIn"] and not c["hidden"] for c in st["categories"])
     assert st["settings"] == {"lastPayment": {"methodId": "credit", "cardId": None}, "testNoticeDismissed": False,
-                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": False, "groupsNotice": False}
+                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": False, "groupsNotice": False,
+                              "pay": None, "paySkipped": False}
     assert st["cards"] == [] and st["schemaVersion"] == 3
     assert app.ui.locator('#category-list .row:has-text("Custom")').count() == 0
     app.tab("history")
@@ -883,7 +884,7 @@ def test_15_layout(make_app, size, scheme):
          "And an equally long note that should be truncated rather than pushing the amount off the screen"),
     ]
     app.seed(make_state(long_rows))
-    want_bg = "rgb(242, 242, 247)" if scheme == "light" else "rgb(0, 0, 0)"
+    want_bg = "rgb(250, 253, 252)" if scheme == "light" else "rgb(0, 0, 0)"      # v2.4: pastel light theme
     assert app.page.evaluate("getComputedStyle(document.body).backgroundColor") == want_bg
 
     def check(label):
@@ -955,9 +956,9 @@ def test_16_focus_trap_and_labels(app):
 
 
 def test_17_no_forbidden_apis_in_source():
-    app_js, sw_js = source("app.js"), source("sw.js")
+    app_js, sw_js, tax_js = source("app.js"), source("sw.js"), source("tax.js")
     html, css = source("index.html"), source("styles.css")
-    everything = "\n".join([app_js, sw_js, html, css])
+    everything = "\n".join([app_js, sw_js, tax_js, html, css])
     for pattern in [r"\balert\s*\(", r"\bconfirm\s*\(", r"\bprompt\s*\(", r"window\.print", r"window\.open",
                     r"XMLHttpRequest", r"WebSocket", r"sendBeacon", r"EventSource", r"importScripts",
                     r"location\.hash", r"<datalist", r"@import", r"url\((?!\"?data:)", r"\beval\s*\(", r"new Function"]:
@@ -966,11 +967,16 @@ def test_17_no_forbidden_apis_in_source():
     urls = set(re.findall(r"https?://[^\s'\"`<>)]+", everything))
     assert urls <= {"http://www.w3.org/2000/svg", "https://www.google.com/maps/search/?api=1&query="}, urls
     # One network call in the page (the site's own card list) and one in the worker (same-origin files).
-    assert re.findall(r"\bfetch\s*\(([^,)]*)", app_js) == ["CARDS_URL"]
-    assert "const CARDS_URL = 'data/cards-ca.json';" in app_js
+    # (v2.4: one helper fetches the site's own JSON files: the card list and the tax figures)
+    assert re.findall(r"\bfetch\s*\(([^,)]*)", app_js) == ["url"]
+    assert sorted(re.findall(r"fetchJson\((\w+)\)", app_js)) == ["CARDS_URL", "TAX_DATA_URL", "url"]
+    assert "const CARDS_URL = 'data/cards-ca.json';" in app_js and "const TAX_DATA_URL = 'data/tax-ca-2026.json';" in app_js
+    # the estimator is pure: no page, storage or network access
+    assert not re.search(r"document\.|localStorage|\bfetch\b|navigator\.", tax_js)
     assert len(re.findall(r"\bfetch\s*\(", sw_js)) == 1 and "self.location.origin" in sw_js
     # No inline script or style element; every file reference is relative.
     assert not re.search(r"<script(?![^>]*\bsrc=)", html) and "<style" not in html
+    assert html.index('src="tax.js" defer') < html.index('src="app.js" defer')
     for ref in re.findall(r'(?:src|href)="([^"]+)"', html):
         assert not re.match(r"([a-z]+:|/)", ref), ref
     assert "Content-Security-Policy" in html and "default-src 'self'" in html

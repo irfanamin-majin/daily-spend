@@ -12,7 +12,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright  # noqa: E402
 
-from conftest import CHROME, SAMPLE_ROWS, SERVE, SUB, App, free_port, make_card, make_state, make_v2_state  # noqa: E402
+from conftest import CHROME, SAMPLE_ROWS, SERVE, SUB, App, free_port, make_card, make_state  # noqa: E402
 
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 CARDS = [
@@ -68,154 +68,84 @@ def main():
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=CHROME, headless=True)
             for scheme in ("light", "dark"):
-                app = App(browser, base, width=390, height=844, scheme=scheme, reduced_motion="reduce",
-                          cards="real", skip_welcome=False,
-                          geolocation={"latitude": 51.0447, "longitude": -114.0719, "accuracy": 25})
-                shot = lambda name: app.page.screenshot(path=os.path.join(out, f"{name}-{scheme}.png"))
+                # Motion is on (the confetti frame needs it); each shot waits for the motion to end.
+                # The estimate uses the site's own tax file (data/tax-ca-2026.json).
+                app = App(browser, base, width=390, height=844, scheme=scheme, cards="real", tax="real")
                 ui = app.ui
-                # first-run setup: two steps
-                shot("first-run-1")
-                ui.locator("#ob-next").click()
-                shot("first-run-2-location")
-                ui.locator("#ob-skip").click()
 
-                # the one-time notice after the move to budget groups (a version 0.2.1 state)
-                app.page.evaluate("s => localStorage.setItem('dailyspend.state', JSON.stringify(s))", make_v2_state(SAMPLE_ROWS))
-                app.page.reload()
-                ui.locator("#mig-ok").wait_for()
-                shot("migration-notice")
-                ui.locator("#mig-ok").click()
+                def shot(name, wait=700):
+                    app.page.wait_for_timeout(wait)
+                    app.page.screenshot(path=os.path.join(out, f"{name}-{scheme}.png"))
 
-                app.seed(sample_state())
-                # Add: empty (red outlines, grey Save), amount only, ready (green Save), a pick from More
-                shot("add")
+                state = sample_state()
+                state["settings"]["pay"] = None
+                state["settings"]["paySkipped"] = False
+                app.seed(state)
+                # Add: empty, a selected chip, ready Save
                 shot("add-1-empty")
-                app.type_amount("23.40")
-                shot("add-2-amount-only")
                 app.chip("Groceries").click()
-                shot("add-3-ready")
-                ui.locator(".chip-more").click()
-                shot("add-more-sheet-groups")
-                ui.locator('#all-categories [data-pick="insurance.life-insurance"]').scroll_into_view_if_needed()
-                ui.locator('#all-categories [data-pick="insurance.life-insurance"]').click()
-                shot("add-4-selected-from-more")
-                app.chip("Life Insurance").click()
+                shot("add-2-selected-chip")
+                app.type_amount("23.40")
+                shot("add-3-ready-save")
+                app.chip("Groceries").click()
                 for _ in range(5):
                     ui.locator('[data-key="back"]').click()
-                app.type_amount("4.75")
-                ui.locator("#details-row").click()
-                ui.locator('#d-pay label:has-text("TD Access")').click()
-                ui.locator("#d-merchant").fill("Tim Hortons")
-                ui.locator("#d-loc-add").scroll_into_view_if_needed()
-                ui.locator("#d-loc-add").click()
-                ui.locator("#d-loc-remove").wait_for()
-                shot("add-details-sheet")
-                ui.locator(".sheet-body").evaluate("(e) => { e.scrollTop = 0; }")
-                shot("add-details-sheet-payment")
-                ui.locator("#d-done").click()
-                shot("add-usual-pill")
-                ui.locator("#usual-pill").click()
-                app.save()
-                shot("add-saved-toast")
-                ui.locator(".toast-undo").click()
-                app.page.wait_for_timeout(2300)
-                ui.locator("#btn-recent").click()
-                shot("add-recent-sheet")
-                app.page.keyboard.press("Escape")
-                # History
+                # History, and Summary (Month) with the compare button
                 app.tab("history")
                 shot("history")
-                box = ui.locator('.row[data-id="seed-002"]').bounding_box()
-                app.page.mouse.move(box["x"] + 200, box["y"] + 28)
-                app.page.mouse.down()
-                app.page.mouse.move(box["x"] + 160, box["y"] + 28)
-                app.page.mouse.move(box["x"] + 120, box["y"] + 28)
-                app.page.mouse.up()
-                shot("history-swipe-delete")
-                ui.locator("#h-search").click()
-                app.page.wait_for_timeout(400)
-                ui.locator("#h-search").fill("co")
-                ui.locator("#f-category").click()
-                ui.locator('#fc-list label:has-text("Groceries")').click()
-                shot("history-category-filter-sheet")
-                ui.locator("#fc-done").click()
-                ui.locator("#f-card").click()
-                ui.locator('#fk-list .item-check:has-text("Cobalt")').click()
-                ui.locator("#fk-done").click()
-                shot("history-filters")
-                ui.locator("#f-clear").click()
-                ui.locator("#f-card").click()
-                ui.locator('#fk-list input[data-inst="td"]').check()
-                shot("history-card-or-institution-sheet")
-                ui.locator("#fk-done").click()
-                shot("history-filtered-by-institution")
-                ui.locator("#f-clear").click()
-                ui.locator('.row[data-id="seed-000"]').click()
-                ui.locator("#e-maps").scroll_into_view_if_needed()
-                shot("history-edit-location")
-                app.page.keyboard.press("Escape")
-                # Summary
                 app.tab("summary")
-                ui.locator('#range-seg [data-range="3"]').click()
-                shot("summary-3-months")
-                ui.locator('#range-seg [data-range="12"]').click()
-                shot("summary-12-months")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('by-group').offsetTop - 60; }")
-                shot("summary-12-months-by-group")
-                ui.locator('#range-seg [data-range="month"]').click()
-                shot("summary-charts")
-                shot("summary-month-matched-colours")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('by-group').offsetTop - 300; }")
-                shot("summary-month-by-group")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = 0; }")
-                ui.locator('#donut .slice[data-group="food"]').dispatch_event("click")
-                shot("summary-group-view")
-                ui.locator("#group-back").click()
-                ui.locator('#by-group .grp-row:has-text("Miscellaneous")').click()
-                ui.locator("#by-group").scroll_into_view_if_needed()
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('by-group').offsetTop - 40; }")
-                shot("summary-by-group-open")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
-                shot("summary-tax-time")
-                ui.locator("#by-card").scroll_into_view_if_needed()
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
-                shot("summary-by-card")
-                # Profile and cards
+                shot("summary-month-compare-button", wait=1000)
+                # Pay sheet with an estimate and a second earner
+                ui.locator("#btn-compare").click()
+                shot("pay-sheet-empty")
+                ui.locator("#pay-1").fill("85,000")
+                ui.locator("#pay-add-earner").click()
+                ui.locator("#pay-2").fill("62,500")
+                ui.locator("#pay-province").select_option("ON")
+                ui.locator("#pay-2").blur()
+                shot("pay-sheet-estimate-two-earners")
+                app.page.keyboard.press("Escape")
+                # the report with one earner, so it has both wins and groups over typical
+                state["settings"]["pay"] = {"earners": [6000000], "province": "ON", "takeHomeOverrideCents": None, "taxYear": 2026,
+                                            "updatedAt": "2026-11-15T12:00:00.000Z"}
+                app.seed(state)
+                app.tab("summary")
+                ui.locator("#btn-compare").click()
+                ui.locator("#report").wait_for()
+                # Report: score, a win (a confetti frame), an over with its tip, savings, wrap-up
+                shot("report-1-score")
+                kinds = ui.locator("#report .rp-card").evaluate_all("(els) => els.map((e) => e.dataset.kind)")
+                done = set()
+                for i, kind in enumerate(kinds[1:], start=1):
+                    ui.locator("#rp-next").click()
+                    name = {"win": "report-2-win-confetti", "over": "report-3-over-with-tip", "savings": "report-4-savings",
+                            "notlogged": "report-5-not-logged", "wrap": "report-6-wrap-up"}[kind]
+                    if kind in done:
+                        app.page.wait_for_timeout(500)
+                        continue
+                    done.add(kind)
+                    shot(name, wait=330 if kind == "win" else 1100)
+                app.page.keyboard.press("Escape")
+                # the same report without pay (spending split)
+                split = sample_state()
+                split["settings"]["pay"] = None
+                split["settings"]["paySkipped"] = True
+                saved_pay = app.state()["settings"]["pay"]
+                app.seed(split)
+                app.tab("summary")
+                ui.locator("#btn-compare").click()
+                ui.locator("#report").wait_for()
+                shot("report-split-score")
+                app.page.keyboard.press("Escape")
+                # Profile with the Pay row
+                split["settings"]["pay"] = saved_pay
+                split["settings"]["paySkipped"] = False
+                app.seed(split)
                 app.tab("profile")
-                app.page.wait_for_timeout(300)
-                shot("my-cards")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('category-list').offsetTop - 60; }")
-                shot("profile-categories")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = v.scrollHeight; }")
-                shot("profile")
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = 0; }")
-                # the institution-first card picker (the site's real card list)
-                ui.locator("#btn-add-card").click()
-                ui.locator("#ac-list .row").first.wait_for()
-                shot("picker-1-institutions")
-                ui.locator("#ac-search").fill("cash")
-                shot("picker-1-search")
-                ui.locator("#ac-search").fill("")
-                ui.locator('#ac-list [data-issuer="RBC Royal Bank"]').click()
-                shot("picker-2-types")
-                ui.locator('#ac-types [data-kind="credit"]').click()
-                shot("picker-3-cards")
-                ui.locator("#ac-cards .row").nth(1).click()
-                ui.locator("#cf-nick").fill("Groceries card")
-                ui.locator("#cf-last4").fill("7788")
-                shot("picker-4-confirm")
-                ui.locator("[data-sheet-back]").click()
-                ui.locator("#ac-manual-here").click()
-                shot("picker-by-hand")
-                ui.locator("[data-sheet-close]").click()
+                ui.locator("#pay-summary").wait_for()
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('pay-settings').offsetTop - 120; }")
+                shot("profile-pay-row")
                 app.close()
-            # one Add screen on a small phone (375 by 667)
-            small = App(browser, base, width=375, height=667, reduced_motion="reduce", cards="real")
-            small.seed(sample_state())
-            small.type_amount("23.40")
-            small.chip("Groceries").click()
-            small.page.screenshot(path=os.path.join(out, "add-375x667-light.png"))
-            small.close()
             browser.close()
     finally:
         server.terminate()

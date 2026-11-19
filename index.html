@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Daily Spend">
 <meta name="format-detection" content="telephone=no">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#FAFDFC" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -25,7 +25,10 @@
   <nav class="tabbar" id="tabbar"></nav>
 </div>
 <div id="sheet-root" hidden></div>
+<div id="report-root" hidden></div>
+<div id="fx-layer" aria-hidden="true" inert></div>
 <div id="toast-region" aria-live="polite"></div>
-<script src="app.js"></script>
+<script src="tax.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>

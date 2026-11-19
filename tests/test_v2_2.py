@@ -3,7 +3,8 @@ import json
 import os
 import re
 
-from conftest import (CAT, GROUPS, ITEMS, OLD_CATS, ROOT, cents, item_id, make_card, make_state, make_v2_state)
+from conftest import (CAT, GROUPS, ITEMS, OLD_CATS, ROOT, cents, item_id, make_card, make_state, make_v2_state,
+                      names_the_template)
 from test_v1 import CAPTURE_CLIPBOARD, COL, HEADER, copied_csv, parse_csv, source
 from test_v2 import pick_payment, restore, tap_inside, wait_cached, wait_until
 
@@ -52,8 +53,8 @@ def test_01_fresh_state_groups_items_and_chips(app):
     assert app.ui.locator('.row[data-act="edit"] .row-title').inner_text() == "Life Insurance"
     assert app.ui.locator('.row[data-act="edit"] .row-sub').inner_text() == "Insurance"       # the group, in small text
     # the source of the category list is not named anywhere
-    for name in ["app.js", "index.html", "styles.css", "sw.js", "README.md", "manifest.webmanifest"]:
-        assert "parallel" not in source(name).lower(), name
+    for name in ["app.js", "tax.js", "index.html", "styles.css", "sw.js", "README.md", "manifest.webmanifest"]:
+        assert not names_the_template(source(name)), name
     assert app.console_errors == []
 
 
@@ -460,10 +461,16 @@ BADGES = """() => Array.from(document.querySelectorAll('#ac-list [data-issuer]')
 POPULAR = ["RBC Royal Bank", "TD", "Scotiabank", "BMO", "CIBC", "National Bank", "Desjardins", "American Express Canada"]
 
 
-def contrast_with_white(rgb):
+def luminance(rgb):
     r, g, b = [int(v) / 255 for v in re.findall(r"\d+", rgb)[:3]]
     lin = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-    return 1.05 / (0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) + 0.05)
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+
+
+def badge_contrast(badge):
+    """Text against its own background (v2.4: pastel with dark text in light, white on colour in dark)."""
+    hi, lo = sorted([luminance(badge["fg"]), luminance(badge["bg"])], reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
 
 
 def az_key(name):
@@ -493,8 +500,8 @@ def test_07_badges_real_list(make_app):
     colours = {b["bg"] for b in badges}
     assert len(colours) == 12
     for b in badges:
-        assert b["w"] >= 40 and b["fg"] == "rgb(255, 255, 255)" and int(b["weight"]) >= 700 and 4 <= b["radius"] <= 10
-        assert contrast_with_white(b["bg"]) >= 4.5, b
+        assert b["w"] >= 40 and int(b["weight"]) >= 700 and 4 <= b["radius"] <= 10
+        assert badge_contrast(b) >= 4.5, b
     assert max(b["w"] for b in badges) > 40                                            # six letters make it grow
     # colours follow the A to Z position, so neighbours in that list never match
     az = sorted(badges, key=lambda b: az_key(b["name"]))
@@ -546,7 +553,7 @@ def test_07b_badges_sections_and_other_places(app):
     app.ui.locator("#cf-save").click()
     hand = app.ui.locator('#card-list .card-tile:has-text("Member Card") .ibadge')
     assert hand.get_attribute("data-t") == "CC" and "ib-n" in hand.get_attribute("class")
-    assert hand.evaluate("(e) => getComputedStyle(e).backgroundColor") == "rgb(107, 114, 128)"
+    assert hand.evaluate("(e) => getComputedStyle(e).backgroundColor") == "rgb(243, 244, 246)"          # neutral grey (light theme)
 
     # the payment picker rows
     app.tab("add")
@@ -555,7 +562,7 @@ def test_07b_badges_sections_and_other_places(app):
     assert app.ui.locator('#d-pay [data-group="other"] .ibadge').count() == 0
     drawn = app.ui.locator('#d-pay [data-group="cards"] .ibadge').first.evaluate(
         "(e) => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color, Math.round(e.getBoundingClientRect().height)]")
-    assert drawn == [before[1]["bg"], "rgb(255, 255, 255)", 26]
+    assert drawn == [before[1]["bg"], before[1]["fg"], 26]
     assert [t.strip() for t in app.ui.locator('#d-pay [data-group="cards"] .option').all_inner_texts()] == [
         "Maple Rewards Visa", "American Express Cobalt Card", "Member Card"]            # the badge is decoration, not part of the label
     app.page.keyboard.press("Escape")
@@ -580,11 +587,11 @@ def test_07b_badges_sections_and_other_places(app):
 # ---------------------------------------------------------------- 8
 def test_08_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.3';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
-    assert "version: '0.2.3'," in source("app.js") and not re.search(r"0\.2\.[012]\b", sw + source("app.js"))
-    app = make_app(service_workers="allow", cards=None)
-    wait_cached(app.page, cache="ds-0.2.3")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.3"]
+    assert "const VERSION = '0.2.4';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "version: '0.2.4'," in source("app.js") and not re.search(r"0\.2\.[0123]\b", sw + source("app.js"))
+    app = make_app(service_workers="allow", cards=None, tax=None)
+    wait_cached(app.page, cache="ds-0.2.4")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.3"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.4"
     assert app.console_errors == []

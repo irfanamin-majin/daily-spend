@@ -12,7 +12,8 @@ It is a plain static web app (HTML, CSS and JavaScript, no build step, no depend
 - **History**: search by merchant or note, filter by category, by card or whole institution, or by location; swipe a row to delete or repeat it.
 - **Categories**: 45 everyday items arranged in 8 fixed budget groups (Housing, Debt Payments, Communications, Food, Transportation, Recreation, Miscellaneous, Insurance). You can add, rename, move and hide items.
 - **Summary**: for the month, the last 3 months or the last 12; a donut by group and bars per day or per month that you can tap, each group opening to its items, totals by card, and a Tax time card for medical, donation and childcare categories.
-- **Profile**: your cards (picked from a built-in Canadian list or added by hand), location setting, categories, CSV backup and restore.
+- **How do you compare?**: a button on Summary opens a swipeable report that sets your spending by group against a typical Canadian budget. Enter your annual pay and province for an estimated take-home, type your own monthly take-home, or skip pay and compare how your spending splits.
+- **Profile**: your cards (picked from a built-in Canadian list or added by hand), location setting, categories, pay for the comparison, CSV backup and restore.
 - **Location (optional)**: saves a GPS pin with an expense. Off unless you turn it on or tap the button.
 
 Amounts are in Canadian dollars, as totals only (no sales tax split). English only.
@@ -27,6 +28,7 @@ In detail:
 - The page only loads its own files. A content security policy in `index.html` blocks requests to anywhere else.
 - "Open in Google Maps" is an ordinary link. Nothing is shared with Google unless you tap it, and the app tells you so the first time.
 - Cards are stored by name only. The app never asks for a card number, expiry date or security code; the last 4 digits are optional.
+- Your pay is stored on the device only, and it is left out of backups.
 - The only way data leaves the device is a backup you copy or download yourself.
 
 Because the data lives only in the browser, clearing the browser's site data deletes it. Use **Profile → Backup** now and then.
@@ -36,9 +38,11 @@ Because the data lives only in the browser, clearing the browser's site data del
 | Path | What it is |
 |---|---|
 | `index.html`, `styles.css`, `app.js` | The app |
+| `tax.js` | Take-home pay estimator: pure functions, no storage, no network |
 | `sw.js` | Service worker: keeps the app's files on the device for offline use |
 | `manifest.webmanifest`, `icons/` | Home-screen install details and icons |
 | `data/cards-ca.json` | The built-in list of Canadian cards (names only) |
+| `data/tax-ca-2026.json` | Federal and provincial figures for the take-home estimate |
 | `tools/make_icons.py` | Redraws the icons (needs Pillow) |
 | `tests/` | Automated tests |
 
@@ -65,7 +69,8 @@ python3 -m pytest tests -q
 
 - The tests start their own local server and open the site from a subpath, the way GitHub Pages serves it.
 - Chrome is expected at `/usr/bin/google-chrome`. Change `CHROME` in `tests/conftest.py` if yours is elsewhere.
-- `tests/test_v1.py` holds the original acceptance tests; `tests/test_v2.py` covers offline use, location, cards, charts, quick repeat, search, swipes, first-run setup, backups and data migration; `tests/test_v2_1.py` covers the card picker and chart scaling; `tests/test_v2_2.py` covers budget groups, the move from the old categories, and institution badges; `tests/test_v2_3.py` covers the Save button, the institution filter, group colours and time ranges.
+- `tests/test_v1.py` holds the original acceptance tests; `tests/test_v2.py` covers offline use, location, cards, charts, quick repeat, search, swipes, first-run setup, backups and data migration; `tests/test_v2_1.py` covers the card picker and chart scaling; `tests/test_v2_2.py` covers budget groups, the move from the old categories, and institution badges; `tests/test_v2_3.py` covers the Save button, the institution filter, group colours and time ranges; `tests/test_v2_4.py` covers motion, the light theme's contrast, the Pay sheet, the take-home estimator and the comparison report.
+- The estimator is tested against made-up round figures in `tests/conftest.py`, worked by hand in the test's comments. If `data/tax-ca-2026.json` lists `referenceCases`, each one is also checked to within $1; with none, that test is skipped.
 - Screenshots: `python3 tests/take_screenshots.py <output folder>`.
 
 ## Releasing a change
@@ -78,3 +83,9 @@ The service worker serves files from its cache first, so a change only reaches p
 ## Card list
 
 `data/cards-ca.json` holds issuers and card names, with each card's kind (`credit`, `debit` or `prepaid`) and networks. Each issuer also has a `short` name used for its badge in the app. It is reference data only: no logos, no artwork, no brand colours, no rates or offers. Card and issuer names belong to their owners; Daily Spend is not affiliated with or endorsed by any of them.
+
+## Take-home estimate
+
+`data/tax-ca-2026.json` holds the 2026 federal and provincial brackets, credits, CPP/QPP, EI and QPIP figures that `tax.js` uses. The estimate is for salary only and ignores RRSP, pension plans, benefits, other income and credits claimed at tax time (it follows payroll withholding, as on a pay cheque), so it is a rough guide, not tax advice. While the file is marked `"placeholder": true` the app makes no estimate and asks for a monthly take-home instead. For a new tax year, add a new data file, point `TAX_DATA_URL` and `TAX_YEAR` in `app.js` at it, list it in `ASSETS` in `sw.js`, and release a new version.
+
+The typical shares in the report are a rough guide taken from a popular Canadian budgeting template. They are not official statistics.

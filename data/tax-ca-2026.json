@@ -1,0 +1,1419 @@
+{
+  "year": 2026,
+  "asOf": "2026-11-19",
+  "placeholder": false,
+  "basis": "Full-year 2026 values as they apply on the annual return (not the prorated July-December payroll values). BC, NL and PE changed mid-year; see their notes. The estimator models what payroll withholds under CRA T4127 (and Revenu Quebec's formulas for Quebec), using those full-year values: brackets, basic personal amounts, Canada employment amount, CPP/QPP and EI/QPIP credits, the Ontario surtax, Ontario Health Premium and Ontario and BC tax reductions. Credits claimed only on the annual return (Ontario LIFT, the low-income reductions of MB, NB, NL, NS and PE, and the NT and NU cost of living credits) are not modelled.",
+  "extensions": [
+    "referenceCases[].externalCheckData: raw third-party table rows used by reference.py to build the externalCheck string."
+  ],
+  "sources": [
+    {
+      "id": "t4127jan",
+      "title": "CRA T4127 Payroll Deductions Formulas, 122nd edition, effective January 1, 2026",
+      "url": "https://www.canada.ca/en/revenue-agency/services/forms-publications/payroll/t4127-payroll-deductions-formulas/t4127-jan/t4127-jan-payroll-deductions-formulas-computer-programs.html",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4127jul",
+      "title": "CRA T4127 Payroll Deductions Formulas, 123rd edition, effective July 1, 2026",
+      "url": "https://www.canada.ca/en/revenue-agency/services/forms-publications/payroll/t4127-payroll-deductions-formulas/t4127-jul/t4127-jul-payroll-deductions-formulas.html",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "cra-cpp",
+      "title": "CRA: CPP contribution rates, maximums and exemptions",
+      "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/canada-pension-plan-cpp/cpp-contribution-rates-maximums-exemptions.html",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "cra-ei",
+      "title": "CRA: EI premium rates and maximums",
+      "url": "https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/payroll/payroll-deductions-contributions/employment-insurance-ei/ei-premium-rates-maximums.html",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "rq-2026",
+      "title": "Revenu Quebec: Principal Changes for 2026 (source deductions and employer contributions)",
+      "url": "https://www.revenuquebec.ca/en/businesses/source-deductions-and-employer-contributions/employers-principal-changes-for-2026/",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "rcgt-qc",
+      "title": "Raymond Chabot Grant Thornton: Individual taxation, Quebec, 2026 (secondary)",
+      "url": "https://www.rcgt.com/contentassets/5142f7cf936d42d7aa7666314c21ccd1/individual-taxation---quebec---2026.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "bc-budget",
+      "title": "Government of BC: Provincial budget tax changes (Budget 2026)",
+      "url": "https://www2.gov.bc.ca/gov/content/taxes/tax-updates/budget-changes",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "bc-basic",
+      "title": "Government of BC: B.C. basic personal income tax credits",
+      "url": "https://www2.gov.bc.ca/gov/content/taxes/income-taxes/personal/credits/basic",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "nl-fin",
+      "title": "Government of NL, Department of Finance: Personal income tax",
+      "url": "https://www.gov.nl.ca/fin/tax-programs-incentives/personal/personalincometax/",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "nl-reg",
+      "title": "NL Regulation 18/26: Low Income Tax Reduction Regulations for the 2025 and 2026 Taxation Years",
+      "url": "https://assembly.nl.ca/Legislation/sr/Regulations/rc260018.htm",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "ey-nl",
+      "title": "EY tax alert: Newfoundland and Labrador Budget 2026 (secondary)",
+      "url": "https://www.ey.com/en_gl/technical/tax-alerts/canada-newfoundland-and-labrador-budget-2026",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "pe-fin",
+      "title": "Government of PEI: Provincial personal income tax",
+      "url": "https://www.princeedwardisland.ca/en/information/finance-and-affordability/provincial-personal-income-tax",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "kpmg-pe",
+      "title": "KPMG TaxNewsFlash: PEI rolls back effective date of new top personal tax rate (secondary)",
+      "url": "https://assets.kpmg.com/content/dam/kpmgsites/ca/pdf/tnf/2026/04/ca-pei-rolls-back-effective-date-of-new-top-personal-tax-rate.pdf.coredownload.inline.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "ey-pe",
+      "title": "EY tax alert: Prince Edward Island Budget 2026, updated (secondary)",
+      "url": "https://taxnews.ey.com/news/2026-0879-canada-prince-edward-island-budget-2026-updated",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "ns-fin",
+      "title": "Government of Nova Scotia: Personal income tax rates and indexation",
+      "url": "https://www.novascotia.ca/personal-income-tax-rates-and-indexation",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "ey-ns",
+      "title": "EY tax alert: Nova Scotia Budget 2026 (secondary)",
+      "url": "https://taxnews.ey.com/news/2026-0527-canada-nova-scotia-budget-2026",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "hrb-nb",
+      "title": "H&R Block help: New Brunswick low-income tax reduction, 2025 (secondary)",
+      "url": "https://support.hrblock.ca/en-ca/Content/Other/NewBrunswickLowIncomeTaxReduction.htm",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "on-lift",
+      "title": "Government of Ontario: Low-Income Workers Tax Credit (LIFT)",
+      "url": "https://www.ontario.ca/page/low-income-workers-tax-credit",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "mb-credits",
+      "title": "Government of Manitoba: Personal tax credits",
+      "url": "https://manitoba.ca/finance/personal/pcredits.html",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-ab",
+      "title": "CRA T4032-AB monthly tax deduction tables, effective January 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032-ab-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-on",
+      "title": "CRA T4032-ON monthly tax deduction tables, effective January 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032-on-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-bc-jan",
+      "title": "CRA T4032-BC monthly tax deduction tables, effective January 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032-bc-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-bc-jul",
+      "title": "CRA T4032-BC monthly tax deduction tables, effective July 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032bc-7-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-qc",
+      "title": "CRA T4032-QC monthly federal tax deduction table, effective January 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032-qc-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-sk",
+      "title": "CRA T4032-SK monthly tax deduction tables, effective January 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032-sk-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    },
+    {
+      "id": "t4032-ns",
+      "title": "CRA T4032-NS monthly tax deduction tables, effective January 1, 2026",
+      "url": "https://www.canada.ca/content/dam/cra-arc/migration/cra-arc/tx/bsnss/tpcs/pyrll/t4032/2026/t4032-ns-12pp-26-eng.pdf",
+      "retrieved": "2026-11-19"
+    }
+  ],
+  "federal": {
+    "brackets": [
+      {
+        "upTo": 58523,
+        "rate": 0.14
+      },
+      {
+        "upTo": 117045,
+        "rate": 0.205
+      },
+      {
+        "upTo": 181440,
+        "rate": 0.26
+      },
+      {
+        "upTo": 258482,
+        "rate": 0.29
+      },
+      {
+        "upTo": null,
+        "rate": 0.33
+      }
+    ],
+    "creditRate": 0.14,
+    "bpa": {
+      "max": 16452,
+      "min": 14829,
+      "phaseOutStart": 181440,
+      "phaseOutEnd": 258482
+    },
+    "employmentAmount": 1501,
+    "quebecAbatement": 0.165,
+    "notes": "Lowest rate and credit rate are 14% for all of 2026. No federal change in the July 1, 2026 edition. Base CPP employee rate is proposed to fall to 4.75% from January 1, 2027 (not 2026).",
+    "src": [
+      "t4127jan",
+      "t4127jul"
+    ]
+  },
+  "cpp": {
+    "ympe": 74600,
+    "yampe": 85000,
+    "exemption": 3500,
+    "baseRate": 0.0495,
+    "firstAdditionalRate": 0.01,
+    "secondAdditionalRate": 0.04,
+    "src": [
+      "t4127jan",
+      "cra-cpp"
+    ]
+  },
+  "qpp": {
+    "ympe": 74600,
+    "yampe": 85000,
+    "exemption": 3500,
+    "baseRate": 0.053,
+    "firstAdditionalRate": 0.01,
+    "secondAdditionalRate": 0.04,
+    "notes": "Employee total rate fell from 6.40% (2025) to 6.30% (2026): base 5.40% to 5.30%.",
+    "src": [
+      "rq-2026",
+      "t4127jan"
+    ]
+  },
+  "ei": {
+    "maxInsurable": 68900,
+    "rate": 0.0163,
+    "rateQuebec": 0.013,
+    "src": [
+      "t4127jan",
+      "cra-ei"
+    ]
+  },
+  "qpip": {
+    "maxInsurable": 103000,
+    "rate": 0.0043,
+    "src": [
+      "rq-2026",
+      "t4127jan"
+    ]
+  },
+  "provinces": {
+    "AB": {
+      "name": "Alberta",
+      "brackets": [
+        {
+          "upTo": 61200,
+          "rate": 0.08
+        },
+        {
+          "upTo": 154259,
+          "rate": 0.1
+        },
+        {
+          "upTo": 185111,
+          "rate": 0.12
+        },
+        {
+          "upTo": 246813,
+          "rate": 0.13
+        },
+        {
+          "upTo": 370220,
+          "rate": 0.14
+        },
+        {
+          "upTo": null,
+          "rate": 0.15
+        }
+      ],
+      "creditRate": 0.08,
+      "bpa": {
+        "max": 22769,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "Credits are at 8% (CRA K1P = 0.08 x TCP). A supplemental credit (CRA K5P) adds 25% of the amount by which 8% credits exceed 4,896 (credit amounts over 61,200), restoring 10%. An employee's BPA + CPP + EI amounts total about 27,400, so it never applies here and is left out.",
+      "src": [
+        "t4127jan"
+      ]
+    },
+    "BC": {
+      "name": "British Columbia",
+      "brackets": [
+        {
+          "upTo": 50363,
+          "rate": 0.056
+        },
+        {
+          "upTo": 100728,
+          "rate": 0.077
+        },
+        {
+          "upTo": 115648,
+          "rate": 0.105
+        },
+        {
+          "upTo": 140430,
+          "rate": 0.1229
+        },
+        {
+          "upTo": 190405,
+          "rate": 0.147
+        },
+        {
+          "upTo": 265545,
+          "rate": 0.168
+        },
+        {
+          "upTo": null,
+          "rate": 0.205
+        }
+      ],
+      "creditRate": 0.056,
+      "bpa": {
+        "max": 13216,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": {
+        "type": "linear",
+        "max": 690,
+        "rate": 0.0356,
+        "phaseOutStart": 25570
+      },
+      "healthPremium": null,
+      "notes": "MID-YEAR CHANGE. Budget 2026 (February 17, 2026) raised the lowest rate and the credit rate from 5.06% to 5.60% for the whole 2026 tax year and the tax reduction credit from 575 to 690 (eliminated at net income 44,952). Payroll used 5.06%/575 for January-June and prorated 6.14%/805 for July-December; the values here are the annual-return ones (CRA 'Option 2').",
+      "src": [
+        "t4127jul",
+        "bc-budget",
+        "bc-basic"
+      ]
+    },
+    "MB": {
+      "name": "Manitoba",
+      "brackets": [
+        {
+          "upTo": 47000,
+          "rate": 0.108
+        },
+        {
+          "upTo": 100000,
+          "rate": 0.1275
+        },
+        {
+          "upTo": null,
+          "rate": 0.174
+        }
+      ],
+      "creditRate": 0.108,
+      "bpa": {
+        "max": 15780,
+        "min": 0,
+        "phaseOutStart": 200000,
+        "phaseOutEnd": 400000
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "Brackets and BPA are not indexed. taxReduction encodes the non-refundable Manitoba Family Tax Benefit for a single person with no dependants: 10.8% x max(0, 2,065 - 9% of net income) = max(0, 223.02 - 0.00972 x NI); it reaches zero at net income 22,944. Not in payroll formulas; annual return only. Confirm on the 2026 MB428 when published. PLANNER CHANGE 2026-11-19: taxReduction set to null. The Manitoba Family Tax Benefit (researched as max 223.02, 0.972% over 0; see SOURCES.md for its confidence) is claimed on the annual return and is not part of payroll deductions, so it is not modelled.",
+      "src": [
+        "t4127jan",
+        "mb-credits"
+      ]
+    },
+    "NB": {
+      "name": "New Brunswick",
+      "brackets": [
+        {
+          "upTo": 52333,
+          "rate": 0.094
+        },
+        {
+          "upTo": 104666,
+          "rate": 0.14
+        },
+        {
+          "upTo": 193861,
+          "rate": 0.16
+        },
+        {
+          "upTo": null,
+          "rate": 0.195
+        }
+      ],
+      "creditRate": 0.094,
+      "bpa": {
+        "max": 13664,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "taxReduction is the NB low-income tax reduction for a single person. ESTIMATED: 2025 basic amount 802 (half of the 1,604 two-person maximum) and 2025 threshold 21,919 (2024's 21,343 x 1.027), each indexed 2% for 2026; the 3% rate and the 2024 threshold are from prior-year NB428 forms recalled from memory. Annual return only. Confirm on the 2026 NB428. PLANNER CHANGE 2026-11-19: taxReduction set to null. The New Brunswick low-income tax reduction (researched as max 818, 3% over 22,357; see SOURCES.md for its confidence) is claimed on the annual return and is not part of payroll deductions, so it is not modelled.",
+      "src": [
+        "t4127jan",
+        "hrb-nb"
+      ]
+    },
+    "NL": {
+      "name": "Newfoundland and Labrador",
+      "brackets": [
+        {
+          "upTo": 44678,
+          "rate": 0.087
+        },
+        {
+          "upTo": 89354,
+          "rate": 0.145
+        },
+        {
+          "upTo": 159528,
+          "rate": 0.158
+        },
+        {
+          "upTo": 223340,
+          "rate": 0.178
+        },
+        {
+          "upTo": 285319,
+          "rate": 0.198
+        },
+        {
+          "upTo": 570638,
+          "rate": 0.208
+        },
+        {
+          "upTo": 1141275,
+          "rate": 0.213
+        },
+        {
+          "upTo": null,
+          "rate": 0.218
+        }
+      ],
+      "creditRate": 0.087,
+      "bpa": {
+        "max": 13094,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "MID-YEAR CHANGE. Budget 2026 (April 29, 2026) raised the BPA; the 2026 annual amount is 13,094 (was 11,188; payroll used a prorated 15,000 for July-December, and 15,000 is expected to be the full amount from 2027). taxReduction is the NL low income tax reduction for a single person: 842 (Regulation 18/26) less 16% of net income over 24,191 (threshold from EY, secondary). Annual return only. PLANNER CHANGE 2026-11-19: taxReduction set to null. The Newfoundland and Labrador low income tax reduction (researched as max 842, 16% over 24,191; see SOURCES.md for its confidence) is claimed on the annual return and is not part of payroll deductions, so it is not modelled.",
+      "src": [
+        "t4127jul",
+        "nl-fin",
+        "nl-reg",
+        "ey-nl"
+      ]
+    },
+    "NS": {
+      "name": "Nova Scotia",
+      "brackets": [
+        {
+          "upTo": 30995,
+          "rate": 0.0879
+        },
+        {
+          "upTo": 61991,
+          "rate": 0.1495
+        },
+        {
+          "upTo": 97417,
+          "rate": 0.1667
+        },
+        {
+          "upTo": 157124,
+          "rate": 0.175
+        },
+        {
+          "upTo": null,
+          "rate": 0.21
+        }
+      ],
+      "creditRate": 0.0879,
+      "bpa": {
+        "max": 11932,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "BPA is a flat 11,932 (the income-tested supplement was removed in 2025). taxReduction is the NS low-income tax reduction for a single person (300 less 5% of net income over 15,000, gone at 21,000; range from EY, secondary; 300 basic amount inferred from the 2025 spouse amount and the range). Annual return only. PLANNER CHANGE 2026-11-19: taxReduction set to null. The Nova Scotia low-income tax reduction (researched as max 300, 5% over 15,000; see SOURCES.md for its confidence) is claimed on the annual return and is not part of payroll deductions, so it is not modelled.",
+      "src": [
+        "t4127jan",
+        "ns-fin",
+        "ey-ns"
+      ]
+    },
+    "NT": {
+      "name": "Northwest Territories",
+      "brackets": [
+        {
+          "upTo": 53003,
+          "rate": 0.059
+        },
+        {
+          "upTo": 106009,
+          "rate": 0.086
+        },
+        {
+          "upTo": 172346,
+          "rate": 0.122
+        },
+        {
+          "upTo": null,
+          "rate": 0.1405
+        }
+      ],
+      "creditRate": 0.059,
+      "bpa": {
+        "max": 18198,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "NOT MODELLED: the refundable NWT cost of living tax credit, claimed on the annual return (about 2.6% of the first 12,000 of adjusted net income, 1.25% of the next 36,000, 1% above 48,000, maximum about 942; figures recalled from prior years, not verified for 2026). It is not part of payroll deductions.",
+      "src": [
+        "t4127jan"
+      ]
+    },
+    "NU": {
+      "name": "Nunavut",
+      "brackets": [
+        {
+          "upTo": 55801,
+          "rate": 0.04
+        },
+        {
+          "upTo": 111602,
+          "rate": 0.07
+        },
+        {
+          "upTo": 181439,
+          "rate": 0.09
+        },
+        {
+          "upTo": null,
+          "rate": 0.115
+        }
+      ],
+      "creditRate": 0.04,
+      "bpa": {
+        "max": 19659,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "NOT MODELLED: the refundable Nunavut cost of living tax credit, claimed on the annual return (about 2% of adjusted net income, maximum about 1,500; recalled from prior years, not verified for 2026). It is not part of payroll deductions.",
+      "src": [
+        "t4127jan"
+      ]
+    },
+    "ON": {
+      "name": "Ontario",
+      "brackets": [
+        {
+          "upTo": 53891,
+          "rate": 0.0505
+        },
+        {
+          "upTo": 107785,
+          "rate": 0.0915
+        },
+        {
+          "upTo": 150000,
+          "rate": 0.1116
+        },
+        {
+          "upTo": 220000,
+          "rate": 0.1216
+        },
+        {
+          "upTo": null,
+          "rate": 0.1316
+        }
+      ],
+      "creditRate": 0.0505,
+      "bpa": {
+        "max": 12989,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": [
+        {
+          "over": 5818,
+          "rate": 0.2
+        },
+        {
+          "over": 7446,
+          "rate": 0.36
+        }
+      ],
+      "taxReduction": {
+        "type": "ON",
+        "basic": 300
+      },
+      "healthPremium": [
+        {
+          "over": 20000,
+          "rate": 0.06,
+          "max": 300
+        },
+        {
+          "over": 36000,
+          "rate": 0.06,
+          "max": 150
+        },
+        {
+          "over": 48000,
+          "rate": 0.25,
+          "max": 150
+        },
+        {
+          "over": 72000,
+          "rate": 0.25,
+          "max": 150
+        },
+        {
+          "over": 200000,
+          "rate": 0.25,
+          "max": 150
+        }
+      ],
+      "notes": "healthPremium is the Ontario Health Premium split into additive steps (cumulative caps 300, 450, 600, 750, 900). NOT MODELLED: the non-refundable Low-Income Individuals and Families Tax (LIFT) credit (min(875, 5.05% of employment income) less 5% of net income over 32,500); it is claimed on the annual return and is not part of payroll deductions.",
+      "src": [
+        "t4127jan",
+        "on-lift"
+      ]
+    },
+    "PE": {
+      "name": "Prince Edward Island",
+      "brackets": [
+        {
+          "upTo": 33928,
+          "rate": 0.095
+        },
+        {
+          "upTo": 65820,
+          "rate": 0.1347
+        },
+        {
+          "upTo": 106890,
+          "rate": 0.166
+        },
+        {
+          "upTo": 142520,
+          "rate": 0.1762
+        },
+        {
+          "upTo": 200000,
+          "rate": 0.19
+        },
+        {
+          "upTo": null,
+          "rate": 0.2
+        }
+      ],
+      "creditRate": 0.095,
+      "bpa": {
+        "max": 15000,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "MID-YEAR CHANGE. Budget 2026 (April 14, 2026, corrected April 22) added a 20% bracket over 200,000 for the whole 2026 tax year (Bill 23; payroll used a prorated 21% for July-December). The fifth threshold is 142,520 per CRA and the PEI government; EY and TaxTips print 142,250. taxReduction is the PEI low-income tax reduction for a single person: 350 less 5% of net income over 23,000, gone at 30,000 (threshold from the PEI government; 350 and 5% from EY, secondary). Annual return only. PLANNER CHANGE 2026-11-19: taxReduction set to null. The Prince Edward Island low-income tax reduction (researched as max 350, 5% over 23,000; see SOURCES.md for its confidence) is claimed on the annual return and is not part of payroll deductions, so it is not modelled.",
+      "src": [
+        "t4127jul",
+        "pe-fin",
+        "kpmg-pe",
+        "ey-pe"
+      ]
+    },
+    "QC": {
+      "name": "Quebec",
+      "brackets": [
+        {
+          "upTo": 54345,
+          "rate": 0.14
+        },
+        {
+          "upTo": 108680,
+          "rate": 0.19
+        },
+        {
+          "upTo": 132245,
+          "rate": 0.24
+        },
+        {
+          "upTo": null,
+          "rate": 0.2575
+        }
+      ],
+      "creditRate": 0.14,
+      "bpa": {
+        "max": 18952,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": false,
+        "ei": false,
+        "qpip": false
+      },
+      "employmentDeduction": {
+        "rate": 0.06,
+        "max": 1450
+      },
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "Quebec gives no credit for QPP, EI or QPIP employee contributions (they are built into the basic personal amount). Enhanced QPP contributions (first and second additional) are deductible, which section 4.4 already does through NI. employmentDeduction is the deduction for workers: 6% of work income, maximum 1,450 (maximum from Revenu Quebec; the 6% rate is the long-standing statutory rate, not restated on the 2026 page retrieved). Federal tax for Quebec residents uses QPP base 5.30%, EI 1.30% and QPIP credits and the 16.5% abatement.",
+      "src": [
+        "rq-2026",
+        "rcgt-qc",
+        "t4127jan"
+      ]
+    },
+    "SK": {
+      "name": "Saskatchewan",
+      "brackets": [
+        {
+          "upTo": 54532,
+          "rate": 0.105
+        },
+        {
+          "upTo": 155805,
+          "rate": 0.125
+        },
+        {
+          "upTo": null,
+          "rate": 0.145
+        }
+      ],
+      "creditRate": 0.105,
+      "bpa": {
+        "max": 20381,
+        "min": null,
+        "phaseOutStart": null,
+        "phaseOutEnd": null
+      },
+      "employmentAmount": null,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "BPA includes the extra 500 a year on top of indexation.",
+      "src": [
+        "t4127jan"
+      ]
+    },
+    "YT": {
+      "name": "Yukon",
+      "brackets": [
+        {
+          "upTo": 58523,
+          "rate": 0.064
+        },
+        {
+          "upTo": 117045,
+          "rate": 0.09
+        },
+        {
+          "upTo": 181440,
+          "rate": 0.109
+        },
+        {
+          "upTo": 500000,
+          "rate": 0.128
+        },
+        {
+          "upTo": null,
+          "rate": 0.15
+        }
+      ],
+      "creditRate": 0.064,
+      "bpa": {
+        "max": 16452,
+        "min": 14829,
+        "phaseOutStart": 181440,
+        "phaseOutEnd": 258482
+      },
+      "employmentAmount": 1501,
+      "credits": {
+        "cppBase": true,
+        "ei": true,
+        "qpip": false
+      },
+      "employmentDeduction": null,
+      "surtax": null,
+      "taxReduction": null,
+      "healthPremium": null,
+      "notes": "BPA mirrors the federal amount including its phase-out (CRA: BPAYT mirrors BPAF); the Canada employment amount also applies at 6.4% (CRA K4P).",
+      "src": [
+        "t4127jan"
+      ]
+    }
+  },
+  "referenceCases": [
+    {
+      "id": "AB-60000",
+      "province": "AB",
+      "gross": 60000,
+      "expected": {
+        "cppBase": 2796.75,
+        "cppFirst": 565.0,
+        "cpp2": 0.0,
+        "ei": 978.0,
+        "qpip": 0.0,
+        "federalTax": 5338.3,
+        "provincialTax": 2631.3,
+        "takeHome": 47690.65
+      },
+      "externalCheck": "T4032-AB monthly, Jan 2026, claim code 1 [t4032-ab]. federal: row 4997-5049, table 12 x 449.35 = 5392.20, model at gross 60276 = 5391.77, diff -0.43; provincial: row 4987-5021, table 12 x 219.55 = 2634.60, model at gross 60048 = 2634.85, diff +0.25.",
+      "externalCheckData": [
+        {
+          "src": "t4032-ab",
+          "label": "T4032-AB monthly, Jan 2026, claim code 1",
+          "federal": {
+            "from": 4997,
+            "to": 5049,
+            "cc1": 449.35
+          },
+          "provincial": {
+            "from": 4987,
+            "to": 5021,
+            "cc1": 219.55
+          }
+        }
+      ]
+    },
+    {
+      "id": "ON-95000",
+      "province": "ON",
+      "gross": 95000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 12276.6,
+        "provincialTax": 6239.46,
+        "takeHome": 70714.42
+      },
+      "externalCheck": "T4032-ON monthly, Jan 2026, claim code 1 [t4032-on]. federal: row 7893-7963, table 12 x 1025.35 = 12304.20, model at gross 95136 = 12304.48, diff +0.28; provincial: row 7904-7974, table 12 x 521.95 = 6263.40, model at gross 95268 = 6263.98, diff +0.58.",
+      "externalCheckData": [
+        {
+          "src": "t4032-on",
+          "label": "T4032-ON monthly, Jan 2026, claim code 1",
+          "federal": {
+            "from": 7893,
+            "to": 7963,
+            "cc1": 1025.35
+          },
+          "provincial": {
+            "from": 7904,
+            "to": 7974,
+            "cc1": 521.95
+          }
+        }
+      ]
+    },
+    {
+      "id": "ON-30000",
+      "province": "ON",
+      "gross": 30000,
+      "expected": {
+        "cppBase": 1311.75,
+        "cppFirst": 265.0,
+        "cpp2": 0.0,
+        "ei": 489.0,
+        "qpip": 0.0,
+        "federalTax": 1397.38,
+        "provincialTax": 1054.74,
+        "takeHome": 25482.13
+      },
+      "externalCheck": "T4032-ON monthly, Jan 2026, claim code 1 [t4032-on]. federal: row 2483-2501, table 12 x 115.45 = 1385.40, model at gross 29904 = 1384.95, diff -0.45; provincial: row 2492-2510, table 12 x 87.95 = 1055.40, model at gross 30012 = 1055.30, diff -0.10. | Payroll tables do not include the Ontario LIFT credit, which is claimed on the annual return; the estimator does not model it either, so these values are comparable to the table.",
+      "externalCheckData": [
+        {
+          "src": "t4032-on",
+          "label": "T4032-ON monthly, Jan 2026, claim code 1",
+          "federal": {
+            "from": 2483,
+            "to": 2501,
+            "cc1": 115.45
+          },
+          "provincial": {
+            "from": 2492,
+            "to": 2510,
+            "cc1": 87.95
+          }
+        }
+      ],
+      "externalCheckNote": "Payroll tables do not include the Ontario LIFT credit, which is claimed on the annual return; the estimator does not model it either, so these values are comparable to the table."
+    },
+    {
+      "id": "BC-45000",
+      "province": "BC",
+      "gross": 45000,
+      "expected": {
+        "cppBase": 2054.25,
+        "cppFirst": 415.0,
+        "cpp2": 0.0,
+        "ei": 733.5,
+        "qpip": 0.0,
+        "federalTax": 3338.2,
+        "provincialTax": 1587.48,
+        "takeHome": 36871.57
+      },
+      "externalCheck": "T4032-BC monthly, Jan 2026 (5.06%, reduction 575), claim code 1 [t4032-bc-jan]. federal: row 3737-3771, table 12 x 278.70 = 3344.40, model at gross 45048 = 3344.41, diff +0.01; provincial: row 3736-3770, table 12 x 120.65 = 1447.80, model at gross 45036 = 1447.89, diff +0.09. | T4032-BC monthly, Jul 2026 (prorated 6.14%, reduction 805), claim code 1 [t4032-bc-jul]. provincial: row 3733-3767, table 12 x 135.55 = 1626.60, model at gross 45000 = 1626.82, diff +0.22. | Both payroll editions reproduce to within 1 a year, which confirms the brackets, BPA, credit mechanics and the 3.56%/25,570 reduction parameters. The annual values (5.60%, 690) are CRA's Option 2 and the BC government's figures. At exactly 45,000 the annual model gives 1,587.48 against 1,536.51 for the average of the model run with each payroll edition's constants (+50.97): between net income 41,722 and 44,952 the January table gives no reduction while the July table gives the prorated 805-based one, so payroll under-withholds relative to the 690-based annual credit. That difference is real and is settled on the return; it is not a wrong constant.",
+      "externalCheckData": [
+        {
+          "src": "t4032-bc-jan",
+          "label": "T4032-BC monthly, Jan 2026 (5.06%, reduction 575), claim code 1",
+          "provOverride": {
+            "lowestRate": 0.0506,
+            "reductionMax": 575
+          },
+          "federal": {
+            "from": 3737,
+            "to": 3771,
+            "cc1": 278.7
+          },
+          "provincial": {
+            "from": 3736,
+            "to": 3770,
+            "cc1": 120.65
+          }
+        },
+        {
+          "src": "t4032-bc-jul",
+          "label": "T4032-BC monthly, Jul 2026 (prorated 6.14%, reduction 805), claim code 1",
+          "provOverride": {
+            "lowestRate": 0.0614,
+            "reductionMax": 805
+          },
+          "provincial": {
+            "from": 3733,
+            "to": 3767,
+            "cc1": 135.55
+          }
+        }
+      ],
+      "externalCheckNote": "Both payroll editions reproduce to within 1 a year, which confirms the brackets, BPA, credit mechanics and the 3.56%/25,570 reduction parameters. The annual values (5.60%, 690) are CRA's Option 2 and the BC government's figures. At exactly 45,000 the annual model gives 1,587.48 against 1,536.51 for the average of the model run with each payroll edition's constants (+50.97): between net income 41,722 and 44,952 the January table gives no reduction while the July table gives the prorated 805-based one, so payroll under-withholds relative to the 690-based annual credit. That difference is real and is settled on the return; it is not a wrong constant."
+    },
+    {
+      "id": "BC-30000",
+      "province": "BC",
+      "gross": 30000,
+      "expected": {
+        "cppBase": 1311.75,
+        "cppFirst": 265.0,
+        "cpp2": 0.0,
+        "ei": 489.0,
+        "qpip": 0.0,
+        "federalTax": 1397.38,
+        "provincialTax": 282.5,
+        "takeHome": 26254.37
+      },
+      "externalCheck": "T4032-BC monthly, Jan 2026 (5.06%, reduction 575), claim code 1 [t4032-bc-jan]. federal: row 2483-2501, table 12 x 115.45 = 1385.40, model at gross 29904 = 1384.95, diff -0.45; provincial: row 2498-2506, table 12 x 26.65 = 319.80, model at gross 30024 = 319.99, diff +0.19. | T4032-BC monthly, Jul 2026 (prorated 6.14%, reduction 805), claim code 1 [t4032-bc-jul]. provincial: row 2493-2501, table 12 x 20.30 = 243.60, model at gross 29964 = 243.66, diff +0.06. | At exactly 30,000 the annual model (282.50) equals the average of the two payroll editions (282.50), as expected below 41,722.",
+      "externalCheckData": [
+        {
+          "src": "t4032-bc-jan",
+          "label": "T4032-BC monthly, Jan 2026 (5.06%, reduction 575), claim code 1",
+          "provOverride": {
+            "lowestRate": 0.0506,
+            "reductionMax": 575
+          },
+          "federal": {
+            "from": 2483,
+            "to": 2501,
+            "cc1": 115.45
+          },
+          "provincial": {
+            "from": 2498,
+            "to": 2506,
+            "cc1": 26.65
+          }
+        },
+        {
+          "src": "t4032-bc-jul",
+          "label": "T4032-BC monthly, Jul 2026 (prorated 6.14%, reduction 805), claim code 1",
+          "provOverride": {
+            "lowestRate": 0.0614,
+            "reductionMax": 805
+          },
+          "provincial": {
+            "from": 2493,
+            "to": 2501,
+            "cc1": 20.3
+          }
+        }
+      ],
+      "externalCheckNote": "At exactly 30,000 the annual model (282.50) equals the average of the two payroll editions (282.50), as expected below 41,722."
+    },
+    {
+      "id": "QC-150000",
+      "province": "QC",
+      "gross": 150000,
+      "expected": {
+        "cppBase": 3768.3,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 895.7,
+        "qpip": 442.9,
+        "federalTax": 21073.0,
+        "provincialTax": 24842.61,
+        "takeHome": 97850.49
+      },
+      "externalCheck": "T4032-QC monthly federal table, Jan 2026, claim code 1 [t4032-qc]. federal: row 12473-12569, table 12 x 1760.70 = 21128.40, model at gross 150252 = 21127.71, diff -0.69. | Federal only. Quebec provincial tax was not checked externally: Revenu Quebec's TP-1015.TI-V tables and WebRAS could not be retrieved from this environment.",
+      "externalCheckData": [
+        {
+          "src": "t4032-qc",
+          "label": "T4032-QC monthly federal table, Jan 2026, claim code 1",
+          "federal": {
+            "from": 12473,
+            "to": 12569,
+            "cc1": 1760.7
+          }
+        }
+      ],
+      "externalCheckNote": "Federal only. Quebec provincial tax was not checked externally: Revenu Quebec's TP-1015.TI-V tables and WebRAS could not be retrieved from this environment."
+    },
+    {
+      "id": "QC-55000",
+      "province": "QC",
+      "gross": 55000,
+      "expected": {
+        "cppBase": 2729.5,
+        "cppFirst": 515.0,
+        "cpp2": 0.0,
+        "ei": 715.0,
+        "qpip": 236.5,
+        "federalTax": 3840.28,
+        "provincialTax": 4771.62,
+        "takeHome": 42192.1
+      },
+      "externalCheck": "T4032-QC monthly federal table, Jan 2026, claim code 1 [t4032-qc]. federal: row 4559-4593, table 12 x 319.30 = 3831.60, model at gross 54912 = 3830.82, diff -0.78. | Federal only. Quebec provincial tax was not checked externally: Revenu Quebec's TP-1015.TI-V tables and WebRAS could not be retrieved from this environment.",
+      "externalCheckData": [
+        {
+          "src": "t4032-qc",
+          "label": "T4032-QC monthly federal table, Jan 2026, claim code 1",
+          "federal": {
+            "from": 4559,
+            "to": 4593,
+            "cc1": 319.3
+          }
+        }
+      ],
+      "externalCheckNote": "Federal only. Quebec provincial tax was not checked externally: Revenu Quebec's TP-1015.TI-V tables and WebRAS could not be retrieved from this environment."
+    },
+    {
+      "id": "MB-250000",
+      "province": "MB",
+      "gross": 250000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 53524.01,
+        "provincialTax": 35948.23,
+        "takeHome": 154758.24
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "NS-75000",
+      "province": "NS",
+      "gross": 75000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 16.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 8258.6,
+        "provincialTax": 7948.87,
+        "takeHome": 53423.01
+      },
+      "externalCheck": "T4032-NS monthly, Jan 2026, claim code 1 [t4032-ns]. federal: row 6245-6297, table 12 x 692.35 = 8308.20, model at gross 75252 = 8308.19, diff -0.01; provincial: row 6222-6274, table 12 x 662.05 = 7944.60, model at gross 74976 = 7945.03, diff +0.43.",
+      "externalCheckData": [
+        {
+          "src": "t4032-ns",
+          "label": "T4032-NS monthly, Jan 2026, claim code 1",
+          "federal": {
+            "from": 6245,
+            "to": 6297,
+            "cc1": 692.35
+          },
+          "provincial": {
+            "from": 6222,
+            "to": 6274,
+            "cc1": 662.05
+          }
+        }
+      ]
+    },
+    {
+      "id": "SK-120000",
+      "province": "SK",
+      "gross": 120000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 17502.14,
+        "provincialTax": 11141.02,
+        "takeHome": 85587.32
+      },
+      "externalCheck": "T4032-SK monthly, Jan 2026, claim code 1 [t4032-sk]. federal: row 9993-10063, table 12 x 1465.85 = 17590.20, model at gross 120336 = 17589.50, diff -0.70; provincial: row 9932-10002, table 12 x 924.25 = 11091.00, model at gross 119604 = 11091.52, diff +0.52.",
+      "externalCheckData": [
+        {
+          "src": "t4032-sk",
+          "label": "T4032-SK monthly, Jan 2026, claim code 1",
+          "federal": {
+            "from": 9993,
+            "to": 10063,
+            "cc1": 1465.85
+          },
+          "provincial": {
+            "from": 9932,
+            "to": 10002,
+            "cc1": 924.25
+          }
+        }
+      ]
+    },
+    {
+      "id": "NL-40000",
+      "province": "NL",
+      "gross": 40000,
+      "expected": {
+        "cppBase": 1806.75,
+        "cppFirst": 365.0,
+        "cpp2": 0.0,
+        "ei": 652.0,
+        "qpip": 0.0,
+        "federalTax": 2691.26,
+        "provincialTax": 2095.16,
+        "takeHome": 32389.83
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "PE-55000",
+      "province": "PE",
+      "gross": 55000,
+      "expected": {
+        "cppBase": 2549.25,
+        "cppFirst": 515.0,
+        "cpp2": 0.0,
+        "ei": 896.5,
+        "qpip": 0.0,
+        "federalTax": 4632.08,
+        "provincialTax": 4239.84,
+        "takeHome": 42167.33
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "NB-85000",
+      "province": "NB",
+      "gross": 85000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 10226.6,
+        "provincialTax": 7614.09,
+        "takeHome": 61389.79
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "YT-200000",
+      "province": "YT",
+      "gross": 200000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 38876.54,
+        "provincialTax": 16840.32,
+        "takeHome": 138513.62
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "NT-70000",
+      "province": "NT",
+      "gross": 70000,
+      "expected": {
+        "cppBase": 3291.75,
+        "cppFirst": 665.0,
+        "cpp2": 0.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 7278.19,
+        "provincialTax": 3197.57,
+        "takeHome": 54444.42
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "NU-100000",
+      "province": "NU",
+      "gross": 100000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 13301.6,
+        "provincialTax": 4275.02,
+        "takeHome": 76653.86
+      },
+      "externalCheck": "No external check obtained for this case; values rest on the constants in SOURCES.md."
+    },
+    {
+      "id": "SK-60000",
+      "province": "SK",
+      "gross": 60000,
+      "expected": {
+        "cppBase": 2796.75,
+        "cppFirst": 565.0,
+        "cpp2": 0.0,
+        "ei": 978.0,
+        "qpip": 0.0,
+        "federalTax": 5338.3,
+        "provincialTax": 3802.38,
+        "takeHome": 46519.57
+      },
+      "externalCheck": "T4032-SK monthly, Jan 2026, claim code 1 [t4032-sk]. federal: row 4997-5049, table 12 x 449.40 = 5392.80, model at gross 60276 = 5391.77, diff -1.03; provincial: row 4976-5010, table 12 x 316.00 = 3792.00, model at gross 59916 = 3792.57, diff +0.57. | Extra case added because the T4032-SK rows were available.",
+      "externalCheckData": [
+        {
+          "src": "t4032-sk",
+          "label": "T4032-SK monthly, Jan 2026, claim code 1",
+          "federal": {
+            "from": 4997,
+            "to": 5049,
+            "cc1": 449.4
+          },
+          "provincial": {
+            "from": 4976,
+            "to": 5010,
+            "cc1": 316.0
+          }
+        }
+      ],
+      "externalCheckNote": "Extra case added because the T4032-SK rows were available."
+    },
+    {
+      "id": "ON-22000",
+      "province": "ON",
+      "gross": 22000,
+      "expected": {
+        "cppBase": 915.75,
+        "cppFirst": 185.0,
+        "cpp2": 0.0,
+        "ei": 358.6,
+        "qpip": 0.0,
+        "federalTax": 362.27,
+        "provincialTax": 271.62,
+        "takeHome": 19906.76
+      },
+      "externalCheck": "Extra case exercising the Ontario tax reduction and the health premium at a low income. No external check.",
+      "externalCheckNote": "Extra case exercising the Ontario tax reduction and the health premium at a low income. No external check."
+    },
+    {
+      "id": "NL-26000",
+      "province": "NL",
+      "gross": 26000,
+      "expected": {
+        "cppBase": 1113.75,
+        "cppFirst": 225.0,
+        "cpp2": 0.0,
+        "ei": 423.8,
+        "qpip": 0.0,
+        "federalTax": 879.82,
+        "provincialTax": 969.48,
+        "takeHome": 22388.15
+      },
+      "externalCheck": "Extra case exercising the NL low income tax reduction (linear). No external check.",
+      "externalCheckNote": "Extra case exercising the NL low income tax reduction (linear). No external check."
+    },
+    {
+      "id": "MB-420000",
+      "province": "MB",
+      "gross": 420000,
+      "expected": {
+        "cppBase": 3519.45,
+        "cppFirst": 711.0,
+        "cpp2": 416.0,
+        "ei": 1123.07,
+        "qpip": 0.0,
+        "federalTax": 109267.99,
+        "provincialTax": 66816.01,
+        "takeHome": 238146.48
+      },
+      "externalCheck": "Extra case with the Manitoba BPA fully phased out and the federal BPA at its minimum. No external check.",
+      "externalCheckNote": "Extra case with the Manitoba BPA fully phased out and the federal BPA at its minimum. No external check."
+    }
+  ]
+}

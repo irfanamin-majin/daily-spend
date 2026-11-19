@@ -6,7 +6,7 @@
    ===================================================================== */
 const STRINGS = {
   appName: 'Daily Spend',
-  version: '0.2.3',
+  version: '0.2.4',
   versionLabel: (v) => `Version ${v}`,
   privacy: 'Your entries stay on this device. No account, no tracking. Nothing is sent anywhere, except that opening a location in Google Maps shares that location with Google.',
   tabs: { add: 'Add', history: 'History', summary: 'Summary', profile: 'Profile' },
@@ -204,6 +204,90 @@ const STRINGS = {
   sliceLabel: (name, amount, pct) => `${name}, ${amount}, ${pct}%`,
   barLabel: (day, amount) => `${day}, ${amount}`,
   wholeDollars: (n) => `$${n}`,
+  // Pay and "How do you compare?"
+  compareButton: '📊 How do you compare?',
+  reportTitle: 'How do you compare?',
+  paySection: 'Pay',
+  payRow: 'Pay for comparison',
+  payNotSet: 'Not set',
+  payOwn: (amount) => `Your take-home: ${amount} a month`,
+  payAbout: (amount) => `about ${amount} a month`,
+  payTwoEarners: '2 earners',
+  payTitle: 'Your pay',
+  payIntro: 'Compare your spending with a typical Canadian budget. Your pay stays on this phone.',
+  payGross: 'Your annual pay before tax',
+  payGrossSecond: "Second earner's annual pay before tax",
+  payAddEarner: 'Add a second earner',
+  payRemoveSecond: 'Remove the second earner',
+  payProvince: 'Province or territory',
+  payChoose: 'Choose…',
+  payEstimated: (amount) => `Estimated take-home: ${amount} a month`,
+  payUsing: (amount) => `Using your take-home: ${amount} a month`,
+  payEstimateHint: 'Enter your pay and province for an estimate.',
+  payNoEstimate: "Couldn't estimate here. Enter your monthly take-home instead.",
+  payEdit: 'Edit',
+  payUseEstimate: 'Use estimate',
+  payTakeHome: 'Monthly take-home',
+  payError: 'Enter an amount up to $2,000,000',
+  payFootnote: 'Estimate for salary at 2026 rates, as on a pay cheque. Ignores RRSP, pension plans, benefits, other income and credits claimed at tax time. Not included in backups.',
+  paySeeReport: 'See my report',
+  paySkip: 'Skip, compare spending split',
+  payRemove: 'Remove pay',
+  paySaved: 'Pay saved',
+  payRemoved: 'Pay removed',
+  rpSlide: (n, of) => `${n} of ${of}`,
+  rpBoss: 'Budget boss!',
+  rpSharp: 'Looking sharp',
+  rpBalanced: 'Nicely balanced',
+  rpGrow: 'Room to grow',
+  rpScore: (wins, groups) => `At or under typical in ${wins} of ${groups} ${groups === 1 ? 'group' : 'groups'}`,
+  rpMonthlyAverage: 'monthly average',
+  rpTakeHome: (amount) => `Take-home about ${amount} a month`,
+  rpSplitMode: 'Comparing how your spending splits',
+  rpAddPay: 'Add your pay',
+  rpEditPay: 'Edit pay',
+  rpSoFar: 'Includes this month so far.',
+  rpNotOver: "The month isn't over yet, so some groups may look low.",
+  rpFew: 'Log spending in a few more groups to compare.',
+  rpYouLabel: 'You',
+  rpTypicalLabel: 'Typical',
+  rpYou: (amount, pct) => `You: ${amount} a month (${pct} of take-home)`,
+  rpTypical: (amount, pct) => `Typical: ${amount} (${pct})`,
+  rpYouShare: (pct, amount) => `You: ${pct}% of your spending (${amount} a month)`,
+  rpTypicalShare: (pct) => `Typical: ${pct}%`,
+  rpLess: (amount) => `🎉 ${amount} less than typical`,
+  rpAtTypical: '🎉 Right at typical',
+  rpAtTypicalShare: '🎉 Right at the typical share',
+  rpYear: (amount) => `That's about ${amount} a year in your pocket.`,
+  rpPointsUnder: (points) => `🎉 ${points} points under the typical share`,
+  rpOver: (amount) => `${amount} over typical`,
+  rpJustOver: (amount) => `Just over typical, by ${amount}`,
+  rpPointsOver: (points) => `${points} points over the typical share`,
+  rpTrim: (month, year) => `Trim it by 10% and keep about ${month} a month (${year} a year)`,
+  rpSavingsTitle: 'Savings',
+  rpLeft: (amount, rate) => `Left after logged spending: ${amount} a month (${rate})`,
+  rpTypicalSaves: 'A typical budget saves 8%',
+  rpSavingsWin: "Nice work. You're keeping more than a typical budget does.",
+  rpSavingsTarget: (amount) => `Saving 8% would mean ${amount} a month`,
+  rpSpentMore: (amount) => `You spent ${amount} more than your take-home`,
+  rpStartBiggest: 'Start with your biggest group over typical',
+  rpOnlyLogged: "Only counts spending you've logged.",
+  rpNotLogged: 'Not logged yet',
+  rpNotLoggedHint: 'If you pay for these, log them to see the full picture.',
+  rpWrapTitle: 'The wrap-up',
+  rpBest: (group, line) => `Biggest win: ${group}, ${line.replace('🎉 ', '')}`,
+  rpOpp: (group, line) => `Biggest opportunity: ${group}, ${line}`,
+  rpFootnote: "Typical shares come from a popular Canadian budgeting template. They're a rough guide, not official statistics.",
+  tips: {
+    housing: 'Housing is hard to change quickly. Check utility plans and insurance at renewal, and plan ahead for your next move or mortgage renewal.',
+    debt: 'Pay the highest-rate balance first, and ask your bank about a lower rate or consolidating.',
+    communications: "Phone and internet prices drop often. Ask your provider about a cheaper plan, and cancel subscriptions you don't use.",
+    food: 'Plan meals around grocery flyers, and swap one takeout meal a week for cooking at home.',
+    transportation: 'Combine errands, keep your tires inflated, and compare car insurance quotes at renewal.',
+    recreation: 'Set a monthly fun budget, and look for free local events and library passes.',
+    misc: 'Wait 48 hours before non-essential buys, and review recurring fees.',
+    insurance: 'Review your coverage once a year, and ask about bundling policies.'
+  },
   donutLabel: 'Spending by group. Each slice opens that group.',
   dailyTitle: 'Day by day',
   dailyLabel: 'Spending by day. Each bar opens that day.',
@@ -284,9 +368,11 @@ const CSV_HEADER = ['id', 'date', 'amount', 'category_group', 'category', 'payme
 const TAX_TAGS = ['medical', 'donation', 'childcare'];
 const DEFAULT_EMOJI = '📦';
 
-// The only two addresses in the app. The card list is one of the site's own files.
+// The only addresses in the app. The card list and the tax figures are the site's own files.
 // The maps address is only ever used as the href of a link the user taps.
 const CARDS_URL = 'data/cards-ca.json';
+const TAX_DATA_URL = 'data/tax-ca-2026.json';
+const TAX_YEAR = 2026;
 const MAPS_URL = 'https://www.google.com/maps/search/?api=1&query=';
 const GEO_OPTIONS = { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 };
 const LATE_FIX_MS = 30000;                    // a fix this long after a save still attaches to it
@@ -404,6 +490,12 @@ const OLD_CATEGORIES = [
   ['gifts', 'Gifts', null, 'misc.gifts'],
   ['other', 'Other', null, 'misc.other']
 ];
+
+const PROVINCES = {
+  AB: 'Alberta', BC: 'British Columbia', MB: 'Manitoba', NB: 'New Brunswick', NL: 'Newfoundland and Labrador', NS: 'Nova Scotia',
+  NT: 'Northwest Territories', NU: 'Nunavut', ON: 'Ontario', PE: 'Prince Edward Island', QC: 'Quebec', SK: 'Saskatchewan', YT: 'Yukon'
+};
+const PROVINCE_CODES = Object.keys(PROVINCES);
 
 // Institutions listed first in the card picker, by their id in the card list.
 const POPULAR_ISSUER_IDS = ['rbc', 'td', 'scotiabank', 'bmo', 'cibc', 'national-bank', 'desjardins', 'amex'];
@@ -644,7 +736,9 @@ function defaultSettings() {
     autoLocation: false,
     mapsNoticeShown: false,
     onboarded: false,
-    groupsNotice: false             // true until the one-time "categories were rearranged" notice has been seen
+    groupsNotice: false,            // true until the one-time "categories were rearranged" notice has been seen
+    pay: null,                      // pay for "How do you compare?"; see cleanPay(). Never in the CSV backup
+    paySkipped: false               // the user chose to compare the spending split instead
   };
 }
 
@@ -727,6 +821,25 @@ const isPaymentId = (id) => PAYMENT_METHODS.some((p) => p.id === id);
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 const round5 = (n) => Math.round(n * 1e5) / 1e5;
 const isLast4 = (v) => typeof v === 'string' && /^\d{4}$/.test(v);
+
+// settings.pay: gross pay in cents for one or two earners plus a province, and/or the user's own
+// monthly take-home. Anything invalid is dropped; with nothing usable left the result is null.
+function cleanPay(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const ok = (c) => Number.isInteger(c) && c >= 100 && c <= 200000000;
+  const province = PROVINCE_CODES.indexOf(raw.province) !== -1 ? raw.province : null;
+  let earners = (Array.isArray(raw.earners) ? raw.earners : []).filter(ok).slice(0, 2);
+  if (!province) earners = [];
+  const override = ok(raw.takeHomeOverrideCents) ? raw.takeHomeOverrideCents : null;
+  if (!earners.length && override === null) return null;
+  return {
+    earners,
+    province: earners.length ? province : null,
+    takeHomeOverrideCents: override,
+    taxYear: Number.isInteger(raw.taxYear) ? raw.taxYear : TAX_YEAR,
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowIso()
+  };
+}
 
 function cleanCategories(list) {
   const cats = defaultCategories();
@@ -838,7 +951,9 @@ function validateState(raw) {
       autoLocation: s.autoLocation === true,
       mapsNoticeShown: s.mapsNoticeShown === true,
       onboarded: s.onboarded === true,
-      groupsNotice: s.groupsNotice === true
+      groupsNotice: s.groupsNotice === true,
+      pay: cleanPay(s.pay),
+      paySkipped: s.paySkipped === true
     }
   };
 }
@@ -1316,16 +1431,31 @@ const draftDate = () => ui.draft.date || todayStr();
 
 const el = {
   app: $('#app'), title: $('#title'), banners: $('#banners'), view: $('#view'),
-  tabbar: $('#tabbar'), sheetRoot: $('#sheet-root'), toast: $('#toast-region')
+  tabbar: $('#tabbar'), sheetRoot: $('#sheet-root'), reportRoot: $('#report-root'), fx: $('#fx-layer'), toast: $('#toast-region')
 };
 
 /* =====================================================================
    10. Toast
    ===================================================================== */
-let toastTimer = null;
+/* Motion never delays a state change and never blocks input. Anything on its way out, and every
+   burst or confetti, is a non-interactive node in #fx-layer. All of it is skipped when the
+   person has asked for reduced motion (checked at the moment the motion would start). */
+function motionOK() {
+  try { return !window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+}
+function fxAdd(node, ms) {
+  el.fx.appendChild(node);
+  setTimeout(() => node.remove(), ms);
+  return node;
+}
+function fxClear() { el.fx.textContent = ''; }
 
+let toastTimer = null, toastOutTimer = null;
+
+// Removes the toast at once (Undo, or a newer toast taking its place).
 function hideToast() {
   clearTimeout(toastTimer);
+  clearTimeout(toastOutTimer);
   el.toast.textContent = '';
 }
 
@@ -1349,7 +1479,10 @@ function showToast(text, options) {
     box.appendChild(btn);
   }
   el.toast.appendChild(box);
-  toastTimer = setTimeout(hideToast, opts.ms || 3000);
+  const ms = opts.ms || 3000;
+  toastTimer = setTimeout(hideToast, ms);
+  // It slides up and fades over its last 160 ms, so it is gone exactly when its time is up.
+  if (motionOK()) toastOutTimer = setTimeout(() => box.classList.add('out'), ms - 160);
 }
 const undoToastShowing = () => !!$('.toast-undo', el.toast);
 
@@ -1388,12 +1521,48 @@ function watchKeyboard(on) {
   if (on) measureKeyboard(); else setKeyboardOverlap(0);
 }
 
+// A constructed copy of the app's stylesheet, for the closed shadow root that draws a closing sheet.
+let exitStyles = null;
+function exitStyleSheet() {
+  if (exitStyles !== null) return exitStyles;
+  exitStyles = false;
+  try {
+    const own = Array.from(document.styleSheets).find((sh) => sh.href && /styles\.css(\?|$)/.test(sh.href));
+    const copy = new CSSStyleSheet();
+    copy.replaceSync(Array.from(own.cssRules).map((rule) => rule.cssText).join('\n'));
+    exitStyles = copy;
+  } catch (e) { /* no exit animation in this browser; closing is simply instant */ }
+  return exitStyles;
+}
+
+// Draws the sheet that is closing: a copy in #fx-layer that slides down and fades. The copy sits
+// in a closed shadow root, so it can never be focused, clicked or found by id, and it is removed
+// when its animation ends, or at once when another sheet or the report opens.
+function drawSheetExit() {
+  if (!motionOK()) return;
+  const styles = exitStyleSheet();
+  if (!styles) return;
+  try {
+    const host = document.createElement('div');
+    host.className = 'fx-ghost';
+    const root = host.attachShadow({ mode: 'closed' });
+    root.adoptedStyleSheets = [styles];
+    const copy = el.sheetRoot.cloneNode(true);
+    copy.classList.add('exit');
+    root.appendChild(copy);
+    const from = $('.sheet-body', el.sheetRoot), to = copy.querySelector('.sheet-body');
+    fxAdd(host, 200);
+    if (from && to) to.scrollTop = from.scrollTop;
+  } catch (e) { /* purely decorative */ }
+}
+
 // options: { dismissible, onClose, back, slide, cls, bodyCls, focusTitle }.
 // Opening a sheet over another replaces it in place (no second rise, and without running the
 // first sheet's onClose). `back` adds a back arrow and makes Escape go up a level;
 // `slide` ('fwd' or 'back') slides the new content in.
 function openSheet(title, bodyHtml, options) {
   const opts = options || {};
+  fxClear();                                   // a sheet still sliding away makes room at once
   const replacing = !!sheet.node;
   const opener = replacing ? sheet.opener : document.activeElement;
   const back = typeof opts.back === 'function' ? opts.back : null;
@@ -1431,6 +1600,7 @@ function closeSheet() {
   sheet.onClose = null;
   sheet.back = null;
   ui.locRefresh = null;
+  drawSheetExit();                             // decoration only: everything below happens at once
   el.sheetRoot.hidden = true;
   el.sheetRoot.innerHTML = '';
   watchKeyboard(false);
@@ -1453,11 +1623,12 @@ function focusables(root) {
     .filter((n) => !n.disabled && n.offsetParent !== null);
 }
 
-function trapFocus(e) {
-  const items = focusables(sheet.node);
+function trapFocus(e) { trapFocusIn(sheet.node, e); }
+function trapFocusIn(box, e) {
+  const items = focusables(box);
   if (!items.length) { e.preventDefault(); return; }
   const first = items[0], last = items[items.length - 1], active = document.activeElement;
-  if (!sheet.node.contains(active) || active === sheet.node) {
+  if (!box.contains(active) || active === box || items.indexOf(active) === -1) {
     e.preventDefault(); (e.shiftKey ? last : first).focus();
   } else if (e.shiftKey && active === first) {
     e.preventDefault(); last.focus();
@@ -1470,7 +1641,7 @@ function trapFocus(e) {
    12. Shell: banners, tab bar, render
    ===================================================================== */
 const TABS = ['add', 'history', 'summary', 'profile'];
-const sw = { reg: null, updateReady: false, reloading: false };   // service worker, see section 20
+const sw = { reg: null, updateReady: false, reloading: false };   // service worker, see section 21
 
 function renderBanners() {
   const parts = [];
@@ -1513,6 +1684,9 @@ function switchTab(tab) {
   ui.drawCharts = tab === 'summary';
   render();
   el.view.scrollTop = 0;
+  el.view.classList.remove('view-in');         // the new view fades in with a small lift
+  void el.view.offsetWidth;
+  el.view.classList.add('view-in');
 }
 
 /* =====================================================================
@@ -1731,8 +1905,10 @@ function updateSaveState() {
   amount.classList.toggle('missing', missing.amount);
   chips.classList.toggle('missing', missing.category);
   const ready = !missing.amount && !missing.category;
+  const was = btn.classList.contains('ready');
   btn.setAttribute('aria-disabled', String(!ready));
   btn.classList.toggle('ready', ready);
+  btn.classList.toggle('pop', ready && (!was || btn.classList.contains('pop')));      // a small pop when it turns ready
   hint.textContent = ready ? '' : missing.amount && missing.category ? STRINGS.missingBoth
     : missing.amount ? STRINGS.missingAmount : STRINGS.missingCategory;
 }
@@ -1742,8 +1918,28 @@ function selectCategory(id, toggle) {
   ui.draft.categoryId = toggle && ui.draft.categoryId === id ? null : id;
   const chips = $('#chips');
   if (chips) chips.innerHTML = chipsHtml();
+  const picked = $('#chips .chip.selected');
+  if (picked) picked.classList.add('pop');
   refreshUsual();
   updateSaveState();
+}
+
+// A ring and a few dots from the Save button, drawn in #fx-layer. The form has already reset.
+function saveBurst() {
+  const btn = $('#btn-save');
+  if (!btn || !motionOK()) return;
+  const box = btn.getBoundingClientRect();
+  const burst = document.createElement('div');
+  burst.className = 'fx-burst';
+  burst.style.left = (box.left + box.width / 2) + 'px';
+  burst.style.top = (box.top + box.height / 2) + 'px';
+  let dots = '<b></b>';
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    dots += `<i style="--dx:${Math.round(Math.cos(a) * 70)}px;--dy:${Math.round(Math.sin(a) * 34)}px"></i>`;
+  }
+  burst.innerHTML = dots;
+  fxAdd(burst, 420);
 }
 
 function updateAmount() {
@@ -1833,6 +2029,7 @@ function saveDraft() {
   handOffCapture(expense.id);
   resetDraft();
   render();
+  saveBurst();
   announceSaved(expense);
 }
 
@@ -2101,9 +2298,18 @@ function openHistoryFiltered(patch) {
   switchTab('history');
 }
 
+// A filter chip was added or removed: the first rows slide in. (Not while typing in search.)
+function slideRowsIn() {
+  $$('#h-body .swipe').slice(0, 12).forEach((row, i) => {
+    row.style.animationDelay = (i * 20) + 'ms';
+    row.classList.add('row-in');
+  });
+}
+
 function setFilter(patch) {
   Object.assign(ui.filters, patch);
   renderHistoryBody();
+  slideRowsIn();
 }
 
 function clearFilters() {
@@ -2111,6 +2317,7 @@ function clearFilters() {
   const box = $('#h-search');
   if (box) box.value = '';
   renderHistoryBody();
+  slideRowsIn();
 }
 
 // Multi-select, grouped. Each group heading has a box that selects or clears the whole group.
@@ -2504,7 +2711,7 @@ function donutHtml(groups, total, caption) {
     // A full circle cannot be drawn as one arc, so a lone slice is two halves.
     const d = groups.length === 1 ? ringSegment(a0, a0 + Math.PI) + ringSegment(a0 + Math.PI, a0 + full) : ringSegment(a0, a1);
     const label = STRINGS.sliceLabel(g.group.name, fmtMoney(g.cents), pcts[i]);
-    return `<path class="slice gc${g.index}" d="${d}" tabindex="0" role="button" data-act="open-group" data-group="${g.group.id}"
+    return `<path class="slice gc${g.index}" style="--i:${i}" d="${d}" tabindex="0" role="button" data-act="open-group" data-group="${g.group.id}"
       data-cents="${g.cents}" aria-label="${esc(label)}"><title>${esc(label)}</title></path>`;
   }).join('');
   const money = fmtMoney(total);
@@ -2717,7 +2924,8 @@ VIEWS.summary = function renderSummary() {
       : `<h2 class="chart-title">${esc(STRINGS.dailyTitle)}</h2>${dailyBarsHtml(list)}
          <p class="footnote">${esc(STRINGS.chartHint)}</p>`;
     body =
-      `<div class="card charts${ui.drawCharts ? ' draw' : ''}" id="charts">
+      `<button type="button" class="btn primary compare-btn" id="btn-compare" data-act="compare">${esc(STRINGS.compareButton)}</button>
+       <div class="card charts${ui.drawCharts ? ' draw' : ''}" id="charts">
          <div class="donut-wrap">${donutHtml(groups, total, scope.range ? STRINGS.monthsCount(scope.months.length) : STRINGS.months[ui.month.m])}</div>
          ${chart}
        </div>
@@ -2726,19 +2934,20 @@ VIEWS.summary = function renderSummary() {
        ${state.cards.length ? `<div class="section-head"><span>${esc(STRINGS.byCard)}</span></div>
        <div class="card" id="by-card">${shareRowsHtml(cardRows, total, 'filter-card-row')}</div>` : ''}`;
   }
+  const drawing = ui.drawCharts;
   ui.drawCharts = false;
   const head = scope.range
     ? `<div class="range-head"><span class="month-label" id="range-label">${esc(scope.label)}</span></div>
-       <div class="month-total"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div>
+       <div class="month-total"><div class="total-wrap"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div></div>
          <div class="sub" id="summary-count">${esc(STRINGS.expenseCount(list.length))}</div>
          <div class="sub" id="range-avg">${esc(STRINGS.rangeAverage(fmtMoney(Math.round(total / scope.months.length))))}</div></div>`
     : `${monthSwitchHtml()}
-       <div class="month-total"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div>
+       <div class="month-total"><div class="total-wrap"><div class="big" id="summary-total">${esc(fmtMoney(total))}</div></div>
          <div class="sub" id="summary-count">${esc(STRINGS.expenseCount(list.length))}</div></div>`;
   // Tax time is by calendar year, so it belongs to the Month view only.
   const tax = scope.range || ui.summaryGroup ? null : taxTotalsForYear(ui.month.y);
   el.view.innerHTML =
-    `<div class="page">${rangeSelectorHtml()}${head}
+    `<div class="page${drawing ? ' summary-in' : ''}">${rangeSelectorHtml()}${head}
        ${body}
        ${tax ? `<div class="card" id="tax-card">
          <h2 class="card-title">${esc(STRINGS.taxTime(ui.month.y))}</h2>
@@ -2746,7 +2955,30 @@ VIEWS.summary = function renderSummary() {
          <p class="footnote" id="tax-footnote">${esc(STRINGS.taxFootnote)}</p>
        </div>` : ''}
      </div>`;
+  if (drawing) countUp($('#summary-total'), total);
 };
+
+// The total counts up in an aria-hidden layer drawn over #summary-total, whose own text is the
+// final value from the start (and is what tests and screen readers read).
+function countUp(node, cents) {
+  if (!node || cents <= 0 || !motionOK()) return;
+  const layer = document.createElement('div');
+  layer.className = 'big count-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.textContent = fmtMoney(0);
+  node.classList.add('counting');
+  node.parentNode.appendChild(layer);
+  const started = performance.now(), length = 450;
+  const finish = () => { layer.remove(); node.classList.remove('counting'); };
+  const step = (now) => {
+    if (!layer.isConnected) return;
+    const k = Math.min(1, (now - started) / length);
+    layer.textContent = fmtMoney(Math.round(cents * (1 - Math.pow(1 - k, 3))));
+    if (k < 1) requestAnimationFrame(step); else finish();
+  };
+  requestAnimationFrame(step);
+  setTimeout(finish, length + 150);          // in case frames are not being drawn
+}
 
 /* =====================================================================
    17. Cards (Profile → My cards; only names are stored, never card numbers)
@@ -2798,19 +3030,23 @@ function parseCatalogue(data) {
   return { cards, issuers };
 }
 
+// The app's only network call: a JSON file that is part of the site itself (the card list, the
+// tax figures). Rejects when the file cannot be fetched or read.
+function fetchJson(url) {
+  try {
+    return fetch(url, { credentials: 'same-origin' }).then((res) => {
+      if (!res.ok) throw new Error('not available');
+      return res.json();
+    });
+  } catch (e) { return Promise.reject(e); }
+}
+
 // Resolves true when the list is ready, false when it could not be loaded. Never rejects.
 function loadCatalogue() {
   if (catalogue.status === 'ok') return Promise.resolve(true);
   if (catalogue.pending) return catalogue.pending;
   catalogue.status = 'loading';
-  let request;
-  try {
-    request = fetch(CARDS_URL, { credentials: 'same-origin' }).then((res) => {
-      if (!res.ok) throw new Error('card list not available');
-      return res.json();
-    });
-  } catch (e) { request = Promise.reject(e); }
-  catalogue.pending = request
+  catalogue.pending = fetchJson(CARDS_URL)
     .then((data) => { const list = parseCatalogue(data); catalogue.cards = list.cards; catalogue.issuers = list.issuers; catalogue.status = 'ok'; return true; })
     .catch(() => { catalogue.status = 'failed'; return false; })
     .then((ok) => { catalogue.pending = null; return ok; });
@@ -3104,6 +3340,7 @@ function setAutoLocation(on, after) {
 let autoLocError = '';
 
 VIEWS.profile = function renderProfile() {
+  loadPayEstimate();
   const swatch = (c) => `<i class="card-swatch sw-${c.colour}" aria-hidden="true"></i>`;
   const cardText = (c) => `<span class="row-text"><span class="row-title">${esc(cardDisplayName(c))}</span><span class="row-sub">${esc(cardMetaLine(c))}</span></span>`;
   const active = activeCards(), archived = archivedCards();
@@ -3143,6 +3380,13 @@ VIEWS.profile = function renderProfile() {
          <button type="button" class="row plain row-action" id="btn-add-category" data-act="cat-add">${esc(STRINGS.addCategory)}</button>
        </div>
 
+       <div class="section-head"><span>${esc(STRINGS.paySection)}</span></div>
+       <div class="card" id="pay-settings">
+         <button type="button" class="row" id="btn-pay" data-act="pay-edit">
+           <span class="row-text"><span class="row-title">${esc(STRINGS.payRow)}</span>
+             <span class="row-sub wrap" id="pay-summary">${esc(paySummaryText())}</span></span>${ICONS.chev}</button>
+       </div>
+
        <div class="section-head"><span>${esc(STRINGS.backup)}</span></div>
        <div class="card">
          <p class="status-line${store.mode !== 'ok' ? ' warn' : ''}" id="storage-status">${esc(storageStatusText())}</p>
@@ -3166,6 +3410,13 @@ VIEWS.profile = function renderProfile() {
        </div>
      </div>`;
 };
+
+// The Pay row shows an estimate, which needs the tax figures; they are loaded only when pay is saved.
+function loadPayEstimate() {
+  const pay = state.settings.pay;
+  if (!pay || pay.takeHomeOverrideCents !== null || taxData.status !== 'idle') return;
+  loadTaxData().then((ok) => { if (ok && ui.tab === 'profile' && !sheet.node && !report.node) VIEWS.profile(); });
+}
 
 function onAutoLocationToggle(input) {
   autoLocError = '';
@@ -3403,7 +3654,485 @@ function openDeleteAllSheet() {
 }
 
 /* =====================================================================
-   19. First-run setup (two steps; can be skipped at either)
+   19. Pay and "How do you compare?" (take-home estimate, typical Canadian budget, report)
+   ===================================================================== */
+// Typical share of monthly take-home pay, by budget group. Typical savings: 8%.
+const TYPICAL = { housing: .30, debt: .07, communications: .04, food: .12, transportation: .15, recreation: .10, misc: .12, insurance: .02 };
+const TYPICAL_SAVINGS = .08;
+const PAY_MIN_CENTS = 100, PAY_MAX_CENTS = 200000000;        // $1 to $2,000,000
+
+/* ----- Tax data: one of the site's own files, loaded when the Pay sheet or the report first needs it ----- */
+const taxData = { status: 'idle', data: null, pending: null };
+
+// The estimator needs every part of the file. A placeholder file (no real figures yet) does not count.
+function validTaxData(d) {
+  const num = (v) => typeof v === 'number' && Number.isFinite(v);
+  const brackets = (b) => Array.isArray(b) && b.length > 0 && b[b.length - 1].upTo === null && b.every((x) => x && num(x.rate));
+  const pension = (c) => !!c && num(c.ympe) && num(c.yampe) && num(c.exemption) && num(c.baseRate) && num(c.firstAdditionalRate) && num(c.secondAdditionalRate);
+  if (!d || typeof d !== 'object' || d.placeholder === true) return false;
+  const f = d.federal;
+  if (!f || !brackets(f.brackets) || !num(f.creditRate) || !f.bpa || !num(f.bpa.max) || !num(f.employmentAmount) || !num(f.quebecAbatement)) return false;
+  if (!pension(d.cpp) || !pension(d.qpp)) return false;
+  if (!d.ei || !num(d.ei.maxInsurable) || !num(d.ei.rate) || !num(d.ei.rateQuebec)) return false;
+  if (!d.qpip || !num(d.qpip.maxInsurable) || !num(d.qpip.rate)) return false;
+  return !!d.provinces && PROVINCE_CODES.every((code) => {
+    const p = d.provinces[code];
+    return !!p && brackets(p.brackets) && num(p.creditRate) && !!p.bpa && num(p.bpa.max);
+  });
+}
+
+// Resolves true when estimates are possible, false otherwise. Never rejects.
+function loadTaxData() {
+  if (taxData.status === 'ok') return Promise.resolve(true);
+  if (taxData.pending) return taxData.pending;
+  taxData.status = 'loading';
+  taxData.pending = fetchJson(TAX_DATA_URL)
+    .then((data) => {
+      if (!validTaxData(data) || !window.DSTax) throw new Error('tax data not usable');
+      taxData.data = data; taxData.status = 'ok'; return true;
+    })
+    .catch(() => { taxData.status = 'failed'; return false; })
+    .then((ok) => { taxData.pending = null; return ok; });
+  return taxData.pending;
+}
+
+function provinceName(code) {
+  const fromData = taxData.status === 'ok' && taxData.data.provinces[code] && taxData.data.provinces[code].name;
+  return (typeof fromData === 'string' && fromData) || PROVINCES[code] || '';
+}
+
+// Household take-home in dollars a month from gross pay, or null when it cannot be worked out here.
+function estimateTakeHome(earnersCents, province) {
+  if (taxData.status !== 'ok' || !earnersCents.length || PROVINCE_CODES.indexOf(province) === -1) return null;
+  try {
+    const monthly = window.DSTax.household(taxData.data, earnersCents.map((c) => c / 100), province).takeHomeMonthly;
+    return Number.isFinite(monthly) && monthly > 0 ? monthly : null;
+  } catch (e) { return null; }
+}
+
+// The saved pay as take-home dollars a month: the user's own figure if they gave one, else the estimate.
+function savedTakeHome() {
+  const pay = state.settings.pay;
+  if (!pay) return null;
+  if (pay.takeHomeOverrideCents !== null) return pay.takeHomeOverrideCents / 100;
+  return estimateTakeHome(pay.earners, pay.province);
+}
+
+const wholeDollars = (dollars) => STRINGS.wholeDollars(intFmt.format(Math.round(dollars)));
+
+// "85,000", "85000.50" or "$85,000" to cents; null when it is not an amount from $1 to $2,000,000.
+function parsePayAmount(text) {
+  const t = String(text).replace(/[$,\s]/g, '');
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(t)) return null;
+  const c = typedToCents(t);
+  return c >= PAY_MIN_CENTS && c <= PAY_MAX_CENTS ? c : null;
+}
+const payFieldText = (cents) => (cents % 100 === 0 ? intFmt.format(cents / 100) : centsToPlain(cents));
+
+function paySummaryText() {
+  const pay = state.settings.pay;
+  if (!pay) return STRINGS.payNotSet;
+  if (pay.takeHomeOverrideCents !== null) return STRINGS.payOwn(wholeDollars(pay.takeHomeOverrideCents / 100));
+  const where = (pay.earners.length === 2 ? STRINGS.payTwoEarners + STRINGS.sep : '') + provinceName(pay.province);
+  const estimate = estimateTakeHome(pay.earners, pay.province);
+  return estimate === null ? where : where + STRINGS.sep + STRINGS.payAbout(wholeDollars(estimate));
+}
+
+/* ----- Pay sheet. from: 'summary' (then the report opens) or 'profile' ----- */
+function openPaySheet(from) {
+  const profile = from === 'profile';
+  const saved = state.settings.pay;
+  let second = !!saved && saved.earners.length === 2;
+  let editing = !!saved && saved.takeHomeOverrideCents !== null;      // the take-home field is showing
+  let override = saved ? saved.takeHomeOverrideCents : null;
+  const money = (id, value) =>
+    `<span class="money-field"><i aria-hidden="true">$</i><input class="input num" type="text" inputmode="decimal" id="${id}" autocomplete="off" value="${esc(value)}"></span>`;
+  const provinceOptions = () => `<option value="">${esc(STRINGS.payChoose)}</option>` + PROVINCE_CODES
+    .map((code) => ({ code, name: provinceName(code) }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
+    .map((p) => `<option value="${p.code}"${saved && saved.province === p.code ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  const node = openSheet(STRINGS.payTitle,
+    `<p class="help" id="pay-intro">${esc(STRINGS.payIntro)}</p>
+     <div class="field"><label class="label" for="pay-1">${esc(STRINGS.payGross)}</label>${money('pay-1', saved && saved.earners[0] ? payFieldText(saved.earners[0]) : '')}</div>
+     <div class="field" id="pay-second"${second ? '' : ' hidden'}>
+       <div class="field-head"><label class="label" for="pay-2">${esc(STRINGS.payGrossSecond)}</label>
+         <button type="button" class="icon-btn" id="pay-remove-2" aria-label="${esc(STRINGS.payRemoveSecond)}">×</button></div>
+       ${money('pay-2', saved && saved.earners[1] ? payFieldText(saved.earners[1]) : '')}</div>
+     <button type="button" class="link-row" id="pay-add-earner"${second ? ' hidden' : ''}>${esc(STRINGS.payAddEarner)}</button>
+     <label class="field"><span class="label">${esc(STRINGS.payProvince)}</span>
+       <select class="input" id="pay-province">${provinceOptions()}</select></label>
+     <div class="pay-estimate plain" id="pay-estimate-box"><span id="pay-estimate" role="status"></span>
+       <button type="button" class="btn small" id="pay-edit">${esc(STRINGS.payEdit)}</button>
+       <button type="button" class="btn small" id="pay-use-estimate" hidden>${esc(STRINGS.payUseEstimate)}</button></div>
+     <div class="field" id="pay-takehome-field"${editing ? '' : ' hidden'}><label class="label" for="pay-takehome">${esc(STRINGS.payTakeHome)}</label>
+       ${money('pay-takehome', override !== null ? payFieldText(override) : '')}</div>
+     <p class="error" id="pay-error" role="alert"></p>
+     <p class="help" id="pay-footnote">${esc(STRINGS.payFootnote)}</p>
+     <button type="button" class="btn primary block" id="pay-save" disabled>${esc(profile ? STRINGS.save : STRINGS.paySeeReport)}</button>
+     <div class="btn-row">${profile
+       ? (saved ? `<button type="button" class="btn ghost-danger" id="pay-remove">${esc(STRINGS.payRemove)}</button>` : `<button type="button" class="btn" data-sheet-close>${esc(STRINGS.cancel)}</button>`)
+       : `<button type="button" class="btn" id="pay-skip">${esc(STRINGS.paySkip)}</button>`}</div>`);
+  const q = (id) => $('#' + id, node);
+  const province = q('pay-province');
+
+  // What the fields say right now.
+  const read = () => {
+    const texts = [q('pay-1').value.trim()].concat(second ? [q('pay-2').value.trim()] : []);
+    const cents = texts.map(parsePayAmount);
+    const takeText = editing ? q('pay-takehome').value.trim() : '';
+    return {
+      cents,
+      grossOk: cents.every((c) => c !== null) && province.value !== '',
+      badGross: texts.some((t, i) => t !== '' && cents[i] === null),
+      takeText,
+      take: takeText === '' ? null : parsePayAmount(takeText)
+    };
+  };
+  const refresh = () => {
+    const r = read();
+    const estimate = r.grossOk ? estimateTakeHome(r.cents, province.value) : null;
+    const failed = taxData.status === 'failed';
+    if (failed && !editing) { editing = true; q('pay-takehome-field').hidden = false; }
+    // An edited take-home that differs from the estimate is the user's own figure.
+    override = r.take !== null && (estimate === null || r.take !== Math.round(estimate) * 100) ? r.take : null;
+    let line;
+    if (override !== null) line = STRINGS.payUsing(wholeDollars(override / 100));
+    else if (estimate !== null) line = STRINGS.payEstimated(wholeDollars(estimate));
+    else if (failed) line = STRINGS.payNoEstimate;
+    else line = STRINGS.payEstimateHint;
+    q('pay-estimate').textContent = line;
+    q('pay-estimate-box').classList.toggle('plain', override === null && estimate === null);
+    q('pay-edit').hidden = editing;
+    q('pay-use-estimate').hidden = !(editing && !failed);
+    q('pay-error').textContent = r.badGross || (r.takeText !== '' && r.take === null) ? STRINGS.payError : '';
+    q('pay-save').disabled = !(override !== null || (r.grossOk && estimate !== null));
+    return { r, estimate };
+  };
+  node.addEventListener('input', refresh);
+  node.addEventListener('change', refresh);
+  q('pay-add-earner').addEventListener('click', () => {
+    second = true;
+    q('pay-second').hidden = false; q('pay-add-earner').hidden = true;
+    refresh();
+    q('pay-2').focus();
+  });
+  q('pay-remove-2').addEventListener('click', () => {
+    second = false;
+    q('pay-2').value = '';
+    q('pay-second').hidden = true; q('pay-add-earner').hidden = false;
+    refresh();
+    q('pay-add-earner').focus();
+  });
+  q('pay-edit').addEventListener('click', () => {
+    const { estimate } = refresh();
+    editing = true;
+    q('pay-takehome-field').hidden = false;
+    if (q('pay-takehome').value.trim() === '' && estimate !== null) q('pay-takehome').value = intFmt.format(Math.round(estimate));
+    refresh();
+    q('pay-takehome').focus();
+  });
+  q('pay-use-estimate').addEventListener('click', () => {
+    editing = false;
+    q('pay-takehome').value = '';
+    q('pay-takehome-field').hidden = true;
+    refresh();
+    q('pay-edit').focus();
+  });
+  q('pay-save').addEventListener('click', () => {
+    const { r, estimate } = refresh();
+    if (override === null && !(r.grossOk && estimate !== null)) return;
+    state.settings.pay = {
+      earners: r.grossOk ? r.cents : [],
+      province: r.grossOk ? province.value : null,
+      takeHomeOverrideCents: override,
+      taxYear: TAX_YEAR,
+      updatedAt: nowIso()
+    };
+    state.settings.paySkipped = false;
+    saveState();
+    closeSheet();
+    if (profile) { render(); showToast(STRINGS.paySaved, { ms: 2000 }); } else openCompare();
+  });
+  if (q('pay-skip')) q('pay-skip').addEventListener('click', () => {
+    state.settings.paySkipped = true;
+    saveState();
+    closeSheet();
+    openCompare();
+  });
+  if (q('pay-remove')) q('pay-remove').addEventListener('click', () => {
+    state.settings.pay = null;
+    state.settings.paySkipped = false;
+    saveState();
+    closeSheet();
+    render();
+    showToast(STRINGS.payRemoved, { ms: 2000 });
+  });
+  refresh();
+  loadTaxData().then(() => {
+    if (sheet.node !== node) return;
+    const chosen = province.value;
+    province.innerHTML = provinceOptions();       // names as the data file spells them
+    province.value = chosen;
+    refresh();
+  });
+}
+
+/* ----- The report's numbers. Pure: takes the Summary scope and the take-home (dollars a month, or null). ----- */
+const onePlace = (x) => (Math.round(x * 10) / 10).toFixed(1);
+const pctText = (ratio) => String(Math.round(ratio * 1000) / 10) + '%';        // 17.5%, 30%
+
+function reportModel(scope, takeHome) {
+  const months = scope.range ? scope.months.length : 1;
+  const spent = groupTotals(scope.list);                                        // groups with spending, in cents
+  const S = new Map(spent.map((g) => [g.group.id, g.cents / 100 / months]));    // dollars a month
+  const logged = GROUPS.filter((g) => S.has(g.id));
+  const total = logged.reduce((sum, g) => sum + S.get(g.id), 0);
+  const typicalTotal = logged.reduce((sum, g) => sum + TYPICAL[g.id], 0);
+  const payMode = takeHome !== null;
+  const items = logged.map((group) => {
+    const s = S.get(group.id);
+    // Every comparison uses the figures as shown (whole dollars, or shares to one decimal place), so the cards foot.
+    const shown = Math.round(s);
+    const item = { group, index: GROUPS.indexOf(group), spend: shown, trim: Math.round(0.1 * shown) };
+    if (payMode) {
+      item.typical = Math.round(TYPICAL[group.id] * takeHome);
+      item.diff = item.spend - item.typical;                                    // whole dollars over (+) or under (-)
+      item.yours = s / takeHome;
+      item.typicalShare = TYPICAL[group.id];
+    } else {
+      item.yours = s / total;
+      item.typicalShare = TYPICAL[group.id] / typicalTotal;
+      item.yoursShown = Math.round(item.yours * 1000) / 10;                     // 45.5
+      item.typicalShown = Math.round(item.typicalShare * 1000) / 10;
+      item.diff = Math.round((item.yoursShown - item.typicalShown) * 10) / 10;  // points over (+) or under (-)
+    }
+    item.win = item.diff <= 0;
+    return item;
+  });
+  const wins = items.filter((i) => i.win).sort((a, b) => a.diff - b.diff);      // furthest under first
+  const overs = items.filter((i) => !i.win).sort((a, b) => b.diff - a.diff);    // furthest over first
+  const ratio = items.length ? wins.length / items.length : 0;
+  const now = monthPrefix(currentMonth());
+  const includesNow = scope.range || monthPrefix(ui.month) === now;
+  const model = {
+    payMode, takeHome, months, items, wins, overs, total,
+    notLogged: GROUPS.filter((g) => !S.has(g.id)),
+    headline: ratio === 1 ? STRINGS.rpBoss : ratio >= 0.75 ? STRINGS.rpSharp : ratio >= 0.5 ? STRINGS.rpBalanced : STRINGS.rpGrow,
+    period: scope.range ? scope.label + STRINGS.sep + STRINGS.rpMonthlyAverage : scope.label,
+    includesNow,
+    nowAlone: !scope.range && includesNow,
+    enough: payMode ? items.length >= 1 : items.length >= 2
+  };
+  if (payMode) {
+    const pay = Math.round(takeHome), left = pay - Math.round(total);            // as shown, so the line foots
+    model.savings = { left, rate: left / pay, win: left / pay >= TYPICAL_SAVINGS, target: Math.round(TYPICAL_SAVINGS * takeHome) };
+  }
+  return model;
+}
+
+/* ----- The report's cards ----- */
+function reportCards(m) {
+  const pay = state.settings.pay;
+  const payButton = (id) => `<button type="button" class="btn" id="${id}" data-rp="pay">${esc(m.payMode ? STRINGS.rpEditPay : STRINGS.rpAddPay)}</button>`;
+  const box = (kind, attrs, inner) => ({ kind, html: `<section class="rp-card${attrs.cls || ''}" data-kind="${kind}"${attrs.data || ''} aria-roledescription="slide">
+      <div class="rp-box">${inner}</div></section>` });
+  if (!m.enough) {
+    return [box('few', {}, `<h3 tabindex="-1">${esc(STRINGS.reportTitle)}</h3><p class="rp-lead" id="rp-few">${esc(STRINGS.rpFew)}</p>${payButton('rp-add-pay')}`)];
+  }
+  const money = wholeDollars;
+  const amountOf = (item) => (m.payMode ? money(Math.abs(item.diff)) : onePlace(Math.abs(item.diff)));
+  const underLine = (item) => (m.payMode
+    ? (item.diff === 0 ? STRINGS.rpAtTypical : STRINGS.rpLess(amountOf(item)))
+    : (item.diff === 0 ? STRINGS.rpAtTypicalShare : STRINGS.rpPointsUnder(amountOf(item))));
+  const overLine = (item) => (m.payMode
+    ? (item.diff <= 0.05 * item.typical ? STRINGS.rpJustOver(amountOf(item)) : STRINGS.rpOver(amountOf(item)))
+    : STRINGS.rpPointsOver(amountOf(item)));
+  const trimLine = (item) => STRINGS.rpTrim(money(item.trim), money(12 * item.trim));
+  const cards = [];
+
+  // 1. Score
+  const where = pay && pay.province && pay.takeHomeOverrideCents === null ? STRINGS.sep + provinceName(pay.province) : '';
+  cards.push(box('score', {}, `<div class="rp-emoji" aria-hidden="true">📊</div>
+    <h3 tabindex="-1" id="rp-headline">${esc(m.headline)}</h3>
+    <p class="rp-lead" id="rp-score">${esc(STRINGS.rpScore(m.wins.length, m.items.length))}</p>
+    <p class="rp-text" id="rp-period">${esc(m.period)}</p>
+    ${m.payMode
+      ? `<button type="button" class="btn link" id="rp-edit-pay" data-rp="pay">${esc(STRINGS.rpTakeHome(money(m.takeHome)) + where)}</button>`
+      : `<p class="rp-text" id="rp-mode">${esc(STRINGS.rpSplitMode)}</p>${payButton('rp-add-pay')}`}
+    ${m.includesNow ? `<p class="rp-note" id="rp-so-far">${esc(STRINGS.rpSoFar)}</p>` : ''}
+    ${m.nowAlone ? `<p class="rp-note" id="rp-not-over">${esc(STRINGS.rpNotOver)}</p>` : ''}`));
+
+  // 2. Wins, then 3. overs: you against typical, in the group's colours
+  const compare = (item) => {
+    const scale = Math.max(item.yours, item.typicalShare);
+    const width = (v) => Math.max(2, (v / scale) * 100).toFixed(1);
+    const you = m.payMode ? STRINGS.rpYou(money(item.spend), pctText(item.yours)) : STRINGS.rpYouShare(item.yoursShown.toFixed(1), money(item.spend));
+    const typical = m.payMode ? STRINGS.rpTypical(money(item.typical), pctText(item.typicalShare)) : STRINGS.rpTypicalShare(item.typicalShown.toFixed(1));
+    return `<div class="rp-emoji" aria-hidden="true">${esc(item.group.emoji)}</div>
+      <h3 tabindex="-1">${esc(item.group.name)}</h3>
+      <div class="rp-bars" aria-hidden="true">
+        <div><div class="rp-bar-label"><b>${esc(STRINGS.rpYouLabel)}</b></div><div class="rp-bar you"><i style="width:${width(item.yours)}%"></i></div></div>
+        <div><div class="rp-bar-label"><b>${esc(STRINGS.rpTypicalLabel)}</b></div><div class="rp-bar typical"><i style="width:${width(item.typicalShare)}%"></i></div></div>
+      </div>
+      <p class="rp-text rp-you">${esc(you)}</p><p class="rp-text rp-typical">${esc(typical)}</p>`;
+  };
+  m.wins.forEach((item) => cards.push(box('win', { cls: ' gc' + item.index, data: ` data-group="${item.group.id}" data-confetti="1"` },
+    `${compare(item)}<p class="rp-strong rp-diff">${esc(underLine(item))}</p>
+     ${m.payMode && item.diff < 0 ? `<p class="rp-text rp-year">${esc(STRINGS.rpYear(money(12 * -item.diff)))}</p>` : ''}`)));
+  m.overs.forEach((item) => cards.push(box('over', { cls: ' gc' + item.index, data: ` data-group="${item.group.id}"` },
+    `${compare(item)}<p class="rp-strong rp-diff">${esc(overLine(item))}</p>
+     <p class="rp-text rp-trim">${esc(trimLine(item))}</p>
+     <p class="rp-tip">${esc(STRINGS.tips[item.group.id])}</p>`)));
+
+  // 4. Savings (pay mode only)
+  if (m.payMode) {
+    const s = m.savings;
+    let lines;
+    if (s.left < 0) {
+      lines = `<p class="rp-strong" id="rp-savings-line">${esc(STRINGS.rpSpentMore(money(-s.left)))}</p><p class="rp-text" id="rp-savings-next">${esc(STRINGS.rpStartBiggest)}</p>`;
+    } else {
+      lines = `<p class="rp-strong" id="rp-savings-line">${esc(STRINGS.rpLeft(money(s.left), pctText(s.rate)))}</p>
+        <p class="rp-text" id="rp-savings-typical">${esc(STRINGS.rpTypicalSaves)}</p>
+        <p class="rp-lead" id="rp-savings-next">${esc(s.win ? STRINGS.rpSavingsWin : STRINGS.rpSavingsTarget(money(s.target)))}</p>`;
+    }
+    cards.push(box('savings', { data: s.win ? ' data-confetti="1"' : '' },
+      `<div class="rp-emoji" aria-hidden="true">💰</div><h3 tabindex="-1">${esc(STRINGS.rpSavingsTitle)}</h3>${lines}
+       <p class="rp-note">${esc(STRINGS.rpOnlyLogged)}</p>`));
+  }
+
+  // 5. Not logged yet
+  if (m.notLogged.length) {
+    cards.push(box('notlogged', {}, `<h3 tabindex="-1">${esc(STRINGS.rpNotLogged)}</h3>
+      <ul class="rp-list" id="rp-not-logged">${m.notLogged.map((g) => `<li>${esc(g.name)}</li>`).join('')}</ul>
+      <p class="rp-text">${esc(STRINGS.rpNotLoggedHint)}</p>`));
+  }
+
+  // 6. Wrap-up
+  const best = m.wins[0], opp = m.overs[0];
+  cards.push(box('wrap', { data: m.wins.length ? ' data-confetti="1"' : '' }, `<h3 tabindex="-1">${esc(STRINGS.rpWrapTitle)}</h3>
+    ${best ? `<p class="rp-lead" id="rp-best">${esc(STRINGS.rpBest(best.group.name, underLine(best)))}</p>` : ''}
+    ${opp ? `<p class="rp-lead" id="rp-opp">${esc(STRINGS.rpOpp(opp.group.name, overLine(opp)))}</p><p class="rp-text" id="rp-opp-trim">${esc(trimLine(opp))}</p>` : ''}
+    <button type="button" class="btn primary" id="rp-done">${esc(STRINGS.done)}</button>
+    ${payButton('rp-pay')}
+    <p class="rp-note" id="rp-footnote">${esc(STRINGS.rpFootnote)}</p>`));
+  return cards;
+}
+
+/* ----- The report: a full-screen dialog of cards that swipe sideways ----- */
+const report = { node: null, opener: null, index: 0, count: 0, seen: new Set(), quietUntil: 0 };
+
+function confetti() {
+  if (!motionOK()) return;
+  const hues = ['teal', 'blue', 'orange', 'purple', 'green', 'rose', 'indigo', 'slate'];
+  const layer = document.createElement('div');
+  layer.className = 'fx-confetti';
+  let html = '';
+  for (let i = 0; i < 24; i++) {
+    const hue = hues[i % hues.length];
+    const x = Math.round((Math.random() - 0.5) * 80), y = 260 + Math.round(Math.random() * 320);
+    html += `<i style="left:${(4 + Math.random() * 92).toFixed(1)}%;--x:${x}px;--y:${y}px;--r:${Math.round((Math.random() - 0.5) * 900)}deg;--d:${Math.round(Math.random() * 140)}ms;--cc:var(--c-${hue});--ce:var(--c-${hue}-edge)"></i>`;
+  }
+  layer.innerHTML = html;
+  $$('.fx-confetti', el.fx).forEach((old) => old.remove());   // one burst at a time
+  fxAdd(layer, 900);
+}
+
+function reportGo(index, how) {
+  if (!report.node) return;
+  const track = $('#rp-track', report.node);
+  const cards = $$('.rp-card', report.node);
+  report.index = Math.max(0, Math.min(report.count - 1, index));
+  cards.forEach((card, i) => {
+    const on = i === report.index;
+    card.inert = !on;
+    if (on) card.removeAttribute('aria-hidden'); else card.setAttribute('aria-hidden', 'true');
+  });
+  $$('.rp-dots i', report.node).forEach((dot, i) => dot.classList.toggle('on', i === report.index));
+  $('#rp-back', report.node).disabled = report.index === 0;
+  $('#rp-next', report.node).disabled = report.index === report.count - 1;
+  if (how !== 'swipe') {
+    report.quietUntil = performance.now() + 500;          // ignore the scroll events this scroll causes
+    try { track.scrollTo({ left: report.index * track.clientWidth, behavior: how === 'jump' || !motionOK() ? 'auto' : 'smooth' }); }
+    catch (e) { track.scrollLeft = report.index * track.clientWidth; }
+  }
+  const card = cards[report.index];
+  const heading = $('h3', card);
+  if (heading) heading.focus({ preventScroll: true });
+  // Confetti the first time a win card becomes the card on screen, once per opening.
+  if (card.dataset.confetti && !report.seen.has(report.index)) confetti();
+  report.seen.add(report.index);
+}
+
+function openReport(takeHome) {
+  const scope = summaryScope();
+  const cards = reportCards(reportModel(scope, takeHome));
+  closeSheet();
+  fxClear();
+  const opener = report.node ? report.opener : document.activeElement;
+  el.reportRoot.innerHTML =
+    `<div id="report" role="dialog" aria-modal="true" aria-labelledby="report-title" tabindex="-1" data-mode="${takeHome === null ? 'split' : 'pay'}">
+       <header class="rp-head"><h2 id="report-title">${esc(STRINGS.reportTitle)}</h2>
+         <button type="button" class="icon-btn" id="rp-close" aria-label="${esc(STRINGS.close)}">×</button></header>
+       <div class="rp-track" id="rp-track">${cards.map((c, i) => c.html.replace('aria-roledescription="slide"',
+         `aria-roledescription="slide" aria-label="${esc(STRINGS.rpSlide(i + 1, cards.length))}"`)).join('')}</div>
+       <footer class="rp-foot"><button type="button" class="btn" id="rp-back">${esc(STRINGS.back)}</button>
+         <div class="rp-dots" aria-hidden="true">${cards.map(() => '<i></i>').join('')}</div>
+         <button type="button" class="btn primary" id="rp-next">${esc(STRINGS.next)}</button></footer>
+     </div>`;
+  el.reportRoot.hidden = false;
+  report.node = $('#report', el.reportRoot);
+  report.opener = opener;
+  report.count = cards.length;
+  report.seen = new Set();
+  el.app.inert = true;
+  el.app.setAttribute('aria-hidden', 'true');
+  const track = $('#rp-track', report.node);
+  track.addEventListener('scroll', () => {
+    if (!report.node || performance.now() < report.quietUntil) return;
+    const at = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    if (at !== report.index) reportGo(at, 'swipe');
+  }, { passive: true });
+  reportGo(0, 'jump');
+}
+
+function closeReport() {
+  if (!report.node) return;
+  const opener = report.opener;
+  report.node = null;
+  report.opener = null;
+  el.reportRoot.hidden = true;
+  el.reportRoot.innerHTML = '';
+  fxClear();
+  el.app.inert = false;
+  el.app.removeAttribute('aria-hidden');
+  if (opener && document.contains(opener) && typeof opener.focus === 'function') {
+    try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+}
+
+el.reportRoot.addEventListener('click', (e) => {
+  if (e.target.closest('#rp-close') || e.target.closest('#rp-done')) closeReport();
+  else if (e.target.closest('#rp-back')) reportGo(report.index - 1);
+  else if (e.target.closest('#rp-next')) reportGo(report.index + 1);
+  else if (e.target.closest('[data-rp="pay"]')) { closeReport(); openPaySheet('summary'); }
+});
+
+// The Summary button. No pay and not skipped: ask. Pay saved: compare with take-home. Skipped: compare the split.
+function openCompare() {
+  const pay = state.settings.pay;
+  if (!pay) {
+    if (state.settings.paySkipped) openReport(null); else openPaySheet('summary');
+    return;
+  }
+  if (pay.takeHomeOverrideCents !== null) { openReport(pay.takeHomeOverrideCents / 100); return; }
+  loadTaxData().then(() => {
+    const takeHome = savedTakeHome();
+    if (takeHome === null) openPaySheet('summary'); else openReport(takeHome);    // no estimate here: ask for take-home
+  });
+}
+
+/* =====================================================================
+   20. First-run setup (two steps; can be skipped at either)
    ===================================================================== */
 // Shown once, the first time the app opens after categories were moved into budget groups.
 function openGroupsNotice() {
@@ -3455,7 +4184,7 @@ function openWelcome() {
 }
 
 /* =====================================================================
-   20. Offline: service worker registration and the "Update ready" banner
+   21. Offline: service worker registration and the "Update ready" banner
    ===================================================================== */
 function registerServiceWorker() {
   if (embedded) return;
@@ -3495,7 +4224,7 @@ function checkForUpdate() {
 }
 
 /* =====================================================================
-   21. Events
+   22. Events
    ===================================================================== */
 const monthCopy = () => ({ y: ui.month.y, m: ui.month.m });
 
@@ -3507,7 +4236,14 @@ const ACTIONS = {
   save: saveDraft,
   details: openDetailsSheet,
   recent: openRecentSheet,
-  month: (t) => { ui.month = shiftMonth(ui.month, Number(t.dataset.delta)); if (ui.tab === 'history') renderHistoryBody(); else VIEWS[ui.tab](); },
+  month: (t) => {
+    ui.month = shiftMonth(ui.month, Number(t.dataset.delta));
+    if (ui.tab === 'history') { renderHistoryBody(); return; }
+    ui.drawCharts = ui.tab === 'summary';      // a new month draws in, like arriving on the tab
+    VIEWS[ui.tab]();
+  },
+  compare: openCompare,
+  'pay-edit': () => openPaySheet('profile'),
   edit: (t) => { if (swipe.open) { closeOpenSwipe(); return; } openEditSheet(t.dataset.id); },
   'swipe-delete': (t) => swipeDelete(t.dataset.id),
   'filter-category': openCategoryFilterSheet,
@@ -3566,6 +4302,13 @@ el.app.addEventListener('change', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (report.node && !sheet.node) {
+    if (e.key === 'Escape') { e.preventDefault(); closeReport(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); reportGo(report.index + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); reportGo(report.index - 1); }
+    else if (e.key === 'Tab') trapFocusIn(report.node, e);
+    return;
+  }
   if (sheet.node) {
     if (e.key === 'Escape') { e.preventDefault(); if (sheet.back) sheet.back(); else closeSheet(); }   // up one level, or close
     else if (e.key === 'Tab') trapFocus(e);
@@ -3593,6 +4336,7 @@ window.addEventListener('storage', (e) => {
   loadState();
   refreshChips();
   closeSheet();
+  closeReport();
   if (ui.draft.cardId && !cardById(ui.draft.cardId)) ui.draft.cardId = null;
   ui.filters.cards = ui.filters.cards.filter((id) => id === NO_CARD || cardById(id));
   render();
@@ -3603,13 +4347,13 @@ window.addEventListener('storage', (e) => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   checkForUpdate();
-  if (sheet.node) return;
+  if (sheet.node || report.node) return;
   if (ui.tab === 'history' && document.activeElement && document.activeElement.id === 'h-search') renderHistoryBody();
   else render();
 });
 
 /* =====================================================================
-   22. Start
+   23. Start
    ===================================================================== */
 loadState();
 refreshChips();

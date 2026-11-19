@@ -84,6 +84,51 @@ FIXTURE_CARDS = {
 }
 
 
+def _plain(**extra):
+    """A province with flat settings; the cases below override what they exercise."""
+    base = {"name": "", "brackets": [{"upTo": 100000, "rate": 0.10}, {"upTo": None, "rate": 0.15}], "creditRate": 0.10,
+            "bpa": {"max": 20000, "min": None, "phaseOutStart": None, "phaseOutEnd": None}, "employmentAmount": None,
+            "credits": {"cppBase": True, "ei": True, "qpip": False}, "employmentDeduction": None, "surtax": None,
+            "taxReduction": None, "healthPremium": None, "notes": "", "src": []}
+    base.update(extra)
+    return base
+
+
+PROVINCE_NAMES = {"AB": "Alberta", "BC": "British Columbia", "MB": "Manitoba", "NB": "New Brunswick",
+                  "NL": "Newfoundland and Labrador", "NS": "Nova Scotia", "NT": "Northwest Territories", "NU": "Nunavut",
+                  "ON": "Ontario", "PE": "Prince Edward Island", "QC": "Quebec", "SK": "Saskatchewan", "YT": "Yukon"}
+
+# Synthetic tax figures in the real file's schema. Round numbers chosen so the expected values in
+# test_v2_4.py can be worked by hand. They are NOT real rates.
+FIXTURE_TAX = {
+    "year": 2026, "asOf": "2026-11-19", "placeholder": False, "sources": [],
+    "federal": {"brackets": [{"upTo": 50000, "rate": 0.10}, {"upTo": 100000, "rate": 0.20}, {"upTo": None, "rate": 0.30}],
+                "creditRate": 0.10, "bpa": {"max": 10000, "min": 5000, "phaseOutStart": 100000, "phaseOutEnd": 200000},
+                "employmentAmount": 1000, "quebecAbatement": 0.20, "src": []},
+    "cpp": {"ympe": 60000, "yampe": 70000, "exemption": 5000, "baseRate": 0.05, "firstAdditionalRate": 0.01, "secondAdditionalRate": 0.04, "src": []},
+    "qpp": {"ympe": 60000, "yampe": 70000, "exemption": 5000, "baseRate": 0.06, "firstAdditionalRate": 0.01, "secondAdditionalRate": 0.04, "src": []},
+    "ei": {"maxInsurable": 50000, "rate": 0.02, "rateQuebec": 0.01, "src": []},
+    "qpip": {"maxInsurable": 80000, "rate": 0.005, "src": []},
+    "provinces": {code: _plain(name=name) for code, name in PROVINCE_NAMES.items()},
+    "referenceCases": [],
+}
+FIXTURE_TAX["provinces"].update({
+    "YT": _plain(name="Yukon", employmentAmount=1000),
+    "ON": _plain(name="Ontario", brackets=[{"upTo": 40000, "rate": 0.05}, {"upTo": 80000, "rate": 0.10}, {"upTo": None, "rate": 0.15}],
+                 creditRate=0.05, bpa={"max": 10000, "min": None, "phaseOutStart": None, "phaseOutEnd": None},
+                 surtax=[{"over": 3000, "rate": 0.20}, {"over": 5000, "rate": 0.36}], taxReduction={"type": "ON", "basic": 300},
+                 healthPremium=[{"over": 20000, "rate": 0.06, "max": 300}, {"over": 36000, "rate": 0.06, "max": 150}]),
+    "QC": _plain(name="Quebec", brackets=[{"upTo": 50000, "rate": 0.14}, {"upTo": None, "rate": 0.19}], creditRate=0.14,
+                 bpa={"max": 18000, "min": None, "phaseOutStart": None, "phaseOutEnd": None},
+                 credits={"cppBase": False, "ei": False, "qpip": False}, employmentDeduction={"max": 1400, "rate": 0.06}),
+    "BC": _plain(name="British Columbia", brackets=[{"upTo": 50000, "rate": 0.05}, {"upTo": None, "rate": 0.10}], creditRate=0.05,
+                 bpa={"max": 12000, "min": None, "phaseOutStart": None, "phaseOutEnd": None},
+                 taxReduction={"type": "linear", "max": 500, "rate": 0.04, "phaseOutStart": 25000}),
+    "MB": _plain(name="Manitoba", brackets=[{"upTo": None, "rate": 0.10}], creditRate=0.08,
+                 bpa={"max": 15000, "min": 0, "phaseOutStart": 200000, "phaseOutEnd": 400000}),
+})
+
+
 class App:
     """A mobile-emulated page plus the things the tests watch.
 
@@ -94,7 +139,7 @@ class App:
     def __init__(self, browser, base_url, width=390, height=844, scheme="light",
                  init_scripts=(), now=NOW, path="/", open_page=True,
                  reduced_motion="no-preference", service_workers="block", cards="fixture",
-                 skip_welcome=True, geolocation=None, fixed_clock=True):
+                 skip_welcome=True, geolocation=None, fixed_clock=True, tax="fixture"):
         self.base_url = base_url
         self.skip_welcome = skip_welcome
         opts = dict(
@@ -119,6 +164,18 @@ class App:
                 else:
                     route.continue_()
             self.context.route("**/data/cards-ca.json", card_route)
+        # tax: "fixture" serves FIXTURE_TAX, "real" the file in data/, "fail" a 404, None leaves the request alone
+        self.tax_requests = 0
+        if tax is not None:
+            def tax_route(route):
+                self.tax_requests += 1
+                if tax == "fixture":
+                    route.fulfill(status=200, content_type="application/json", body=json.dumps(FIXTURE_TAX))
+                elif tax == "fail":
+                    route.fulfill(status=404, content_type="text/plain", body="not found")
+                else:
+                    route.continue_()
+            self.context.route("**/data/tax-ca-2026.json", tax_route)
         self.page = self.context.new_page()
         if fixed_clock:
             self.page.clock.set_fixed_time(now)
@@ -224,6 +281,19 @@ def app(make_app):
     return make_app()
 
 
+# The budgeting template behind the typical shares, and its publisher, must never be named in the
+# app or the repository, tests included. So the check works from hashes of the name, not the name.
+UNNAMED = {"a64bd62526e63dd53e143aaeb2c319dbc1d6e213b2572345a08a26a8a933d35b", "722bdaf552dcb4950e0b17443f3c6ceb8f15d0ffff9d77e8ad8b562646ef3c34"}
+
+
+def names_the_template(text):
+    """True if any word pair (or run-together pair) in the text hashes to the unnamed publisher."""
+    import hashlib
+    words = re.findall(r"[a-z]+", text.lower())
+    grams = set(words) | {a + " " + b for a, b in zip(words, words[1:])}
+    return any(hashlib.sha256(g.encode()).hexdigest() in UNNAMED for g in grams)
+
+
 def cents(text):
     """'$1,234.56' -> 123456"""
     t = text.strip().replace("$", "").replace(",", "")
@@ -323,7 +393,8 @@ def make_state(rows, test_notice_dismissed=False, cards=(), onboarded=True, auto
     return {"schemaVersion": 3, "expenses": make_expenses(rows), "categories": make_cats(), "cards": list(cards),
             "settings": {"lastPayment": {"methodId": "credit", "cardId": None},
                          "testNoticeDismissed": test_notice_dismissed, "autoLocation": auto_location,
-                         "mapsNoticeShown": False, "onboarded": onboarded, "groupsNotice": False}}
+                         "mapsNoticeShown": False, "onboarded": onboarded, "groupsNotice": False,
+                         "pay": None, "paySkipped": False}}
 
 
 def make_v2_state(rows, cards=(), onboarded=True):

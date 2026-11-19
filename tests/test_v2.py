@@ -26,7 +26,7 @@ FAILED = "Couldn't get your location. Try again in a moment."
 CALGARY = {"latitude": 51.0447123, "longitude": -114.0718832, "accuracy": 25}
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 MAPS = "https://www.google.com/maps/search/?api=1&query=51.04471,-114.07188"
-CACHE = "ds-0.2.3"
+CACHE = "ds-0.2.4"
 # A location service the test controls: each request waits until the test answers it.
 STUB_GEO = """
   window.__geo = [];
@@ -36,7 +36,7 @@ STUB_GEO = """
 CSP_WATCH = "window.__csp = []; document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(e.blockedURI + ' ' + e.violatedDirective));"
 
 
-def wait_cached(page, cache=CACHE, files=10):
+def wait_cached(page, cache=CACHE, files=12):
     """Wait until the service worker controls the page and has stored the app's files."""
     page.evaluate("""async ([name, n]) => {
       await navigator.serviceWorker.ready;
@@ -61,6 +61,7 @@ def wait_until(check, timeout=5.0):
 
 def tap_inside(app, locator):
     """Click a point that really belongs to an SVG shape (a slice's box centre can be the hole)."""
+    app.page.wait_for_timeout(450)          # v2.4: let the Summary cards finish rising in before measuring
     point = locator.evaluate("""(el) => {
       const b = el.getBoundingClientRect();
       for (let i = 1; i < 12; i++) for (let j = 1; j < 12; j++) {
@@ -103,7 +104,7 @@ def pick_payment(app, label):
 
 # ---------------------------------------------------------------- 1
 def test_01_subpath_same_origin_only(make_app):
-    app = make_app(service_workers="allow", cards=None, init_scripts=[CSP_WATCH], skip_welcome=False)
+    app = make_app(service_workers="allow", cards=None, tax=None, init_scripts=[CSP_WATCH], skip_welcome=False)
     assert re.search(r"^http://127\.0\.0\.1:\d+/[^/]+/$", app.page.url)       # served from a subpath
     wait_cached(app.page)
     # walk through the app, including the card list and a save
@@ -136,7 +137,7 @@ def test_01_subpath_same_origin_only(make_app):
 
 # ---------------------------------------------------------------- 2
 def test_02_works_offline_after_one_visit(make_app):
-    app = make_app(service_workers="allow", cards=None)
+    app = make_app(service_workers="allow", cards=None, tax=None)
     wait_cached(app.page)
     app.add("4.50", "Transit")
     app.context.set_offline(True)
@@ -181,27 +182,29 @@ def test_03_update_ready_banner(browser, tmp_path):
                 break
             except Exception:
                 time.sleep(0.1)
-        app = App(browser, base, service_workers="allow", cards=None, fixed_clock=False)
+        app = App(browser, base, service_workers="allow", cards=None, tax=None, fixed_clock=False)
         try:
             wait_cached(app.page)
             assert app.ui.locator("#banner-update").count() == 0
             app.add("9", "Groceries")
             # publish the next version
             sw = (site / "sw.js").read_text()
-            assert "const VERSION = '0.2.3';" in sw
-            (site / "sw.js").write_text(sw.replace("const VERSION = '0.2.3';", "const VERSION = '0.2.4';"))
+            now = re.search(r"const VERSION = '(\d+)\.(\d+)\.(\d+)';", sw)
+            old_cache = "ds-" + ".".join(now.groups())
+            new_cache = "ds-%s.%s.%d" % (now.group(1), now.group(2), int(now.group(3)) + 1)
+            (site / "sw.js").write_text(sw.replace(now.group(0), "const VERSION = '%s';" % new_cache[3:]))
             app.reload()                                       # the browser checks for a new worker on navigation
             banner = app.ui.locator("#banner-update")
             banner.wait_for()
             assert "Update ready" in banner.inner_text() and banner.locator("button").inner_text() == "Reload"
             # until Reload is pressed the old version keeps serving and both caches exist
-            assert sorted(app.page.evaluate("caches.keys()")) == ["ds-0.2.3", "ds-0.2.4"]
+            assert sorted(app.page.evaluate("caches.keys()")) == [old_cache, new_cache]
             with app.page.expect_navigation():
                 banner.locator("button").click()
             app.ready()
-            wait_cached(app.page, cache="ds-0.2.4")
+            wait_cached(app.page, cache=new_cache)
             wait_until(lambda: len(app.page.evaluate("caches.keys()")) == 1)
-            assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]                 # old cache deleted on activate
+            assert app.page.evaluate("caches.keys()") == [new_cache]                   # old cache deleted on activate
             assert app.ui.locator("#banner-update").count() == 0
             assert len(app.expenses()) == 1                                            # data untouched
             assert app.console_errors == []
@@ -241,11 +244,11 @@ def test_04_manifest_and_icons():
     # the worker's file list: every file exists, and the versions agree
     sw = source("sw.js")
     assets = re.findall(r"'([^']+)'", sw[sw.index("const ASSETS"):sw.index("];", sw.index("const ASSETS"))])
-    assert len(assets) == 10 and "data/cards-ca.json" in assets
+    assert len(assets) == 12 and "data/cards-ca.json" in assets and "tax.js" in assets and "data/tax-ca-2026.json" in assets
     for a in assets:
         assert os.path.isfile(os.path.join(ROOT, "index.html" if a == "./" else a)), a
     assert all(os.path.join("icons", os.path.basename(i["src"])) in [a.replace("/", os.sep) for a in assets] for i in icons)
-    assert "const VERSION = '0.2.3';" in sw and "version: '0.2.3'," in source("app.js")
+    assert "const VERSION = '0.2.4';" in sw and "version: '0.2.4'," in source("app.js")
     assert os.path.isfile(os.path.join(ROOT, ".nojekyll")) and os.path.isfile(os.path.join(ROOT, "README.md"))
     cards = json.loads(source("data/cards-ca.json"))
     assert {"version", "lastChecked", "issuers", "cards"} <= set(cards)
@@ -447,7 +450,7 @@ def test_05d_automatic_location(make_app):
 def test_06_cards(app):
     app.tab("profile")
     heads = app.ui.locator("#view .section-head").all_inner_texts()
-    assert heads == ["My cards", "Location", "Categories", "Backup", "About"]
+    assert heads == ["My cards", "Location", "Categories", "Pay", "Backup", "About"]
     assert app.ui.locator('.tab[data-tab="profile"] span').inner_text() == "Profile"
     assert app.ui.locator("#no-cards").inner_text() == "Add the cards you use to see spending by card."
     assert app.ui.locator("#btn-add-card").inner_text() == "Add a card"
@@ -764,7 +767,7 @@ def test_08_charts(app):
     # another month, a month with one group (a full ring), an empty month
     app.tab("summary")
     app.ui.locator('[data-act="month"][data-delta="-1"]').click()
-    assert "draw" not in app.ui.locator("#charts").get_attribute("class")           # drawn once, on arrival
+    assert "draw" in app.ui.locator("#charts").get_attribute("class")               # v2.4: a new month draws in too
     assert app.ui.locator("#donut .slice").count() == 2 and app.ui.locator("#today-dot").count() == 0
     for _ in range(7):
         app.ui.locator('[data-act="month"][data-delta="-1"]').click()
@@ -1359,7 +1362,8 @@ def test_15_v1_state_migrates(make_app):
     st = app.state()
     assert st["schemaVersion"] == 3 and st["cards"] == []
     assert st["settings"] == {"lastPayment": {"methodId": "cash", "cardId": None}, "testNoticeDismissed": True,
-                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": True, "groupsNotice": False}
+                              "autoLocation": False, "mapsNoticeShown": False, "onboarded": True, "groupsNotice": False,
+                              "pay": None, "paySkipped": False}
     assert len(st["expenses"]) == len(v1["expenses"]) == 18
     for old, new in zip(v1["expenses"], st["expenses"]):
         want = "c_custom" if old["categoryId"] == "c_custom" else CAT[old["categoryId"]]
