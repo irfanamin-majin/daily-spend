@@ -716,6 +716,32 @@ button.cat-row:active { background: var(--surface-2); }
 @keyframes confetti { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--x), var(--y)) rotate(var(--r)); } }
 
 /* All motion is off for people who ask for less of it. */
+/* ----- v2.5: the category browser (More, and Profile's category manager) ----- */
+.cp-status { font-size: 13px; color: var(--text-2); margin: -2px 2px 8px; }
+.cp-status:empty { display: none; }
+:root { --tile-text: #1F2933; }
+@media (prefers-color-scheme: dark) { :root { --tile-text: #0B1215; } }
+.cp-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-bottom: 6px; }
+.cp-tile {
+  position: relative; min-height: 92px; border-radius: 16px; padding: 10px 12px; text-align: left;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px;
+  background: var(--gc); color: var(--tile-text); border: 2px solid var(--gc-edge);
+  animation: tile-in .14s ease-out both; animation-delay: calc(var(--i, 0) * 6ms);
+}
+.cp-tile:active { transform: scale(.97); }
+.cp-emoji { font-size: 24px; line-height: 1.1; flex: none; }
+.cp-text { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 1px; }
+.cp-name { font-size: 15px; font-weight: 600; line-height: 1.2; overflow-wrap: break-word; }
+.cp-count, .cp-selected { font-size: 12.5px; line-height: 1.25; }
+.cp-selected { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-check { position: absolute; top: 6px; right: 9px; font-size: 14px; font-weight: 700; }
+.cp-tile.selected { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--gc-edge); }
+@keyframes tile-in { from { transform: scale(.94); opacity: 0; } }
+.cp-chips { margin: 4px 0 8px; }
+.cp-chips .chip:not(.selected) { background: var(--surface-2); }
+.cp-status.none { text-align: center; padding: 28px 12px; font-size: 16px; overflow-wrap: anywhere; }
+.cp-sheet .sheet-body { min-height: 46vh; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .toast-check path { stroke-dashoffset: 0; }

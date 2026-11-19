@@ -432,14 +432,14 @@ def test_10_restore(make_app):
     src.seed(make_state(TRICKY + SAMPLE_ROWS[:6]))
     # a custom tagged category must come back too
     src.tab("profile")
-    src.ui.locator("#btn-add-category").click()
+    src.cat_add()
     src.ui.locator("#c-name").fill("Vet")
     src.ui.locator('#c-tags label:has-text("Medical")').click()
     src.ui.locator("#c-save").click()
+    src.close_sheet()
     src.tab("add")
     src.type_amount("88")
-    src.ui.locator(".chip-more").click()
-    src.ui.locator('#all-categories .row:has-text("Vet")').click()
+    src.more_pick("Vet")
     src.save()
     text = copied_csv(src)
     original = src.expenses()
@@ -510,7 +510,7 @@ def test_10_restore(make_app):
 # ---------------------------------------------------------------- 11
 def test_11_categories(app):
     app.tab("profile")
-    app.ui.locator("#btn-add-category").click()
+    app.cat_add()
     assert app.ui.locator("#c-emoji").input_value() == "📦"
     assert app.ui.locator("#c-name").get_attribute("maxlength") == "32"
     app.ui.locator("#c-save").click()
@@ -525,19 +525,24 @@ def test_11_categories(app):
     app.ui.locator("#c-emoji").fill("🏃‍♀️")
     app.ui.locator('#c-tags label:has-text("Medical")').click()
     app.ui.locator("#c-save").click()
+    assert app.ui.locator("#sheet-title").inner_text() == "Miscellaneous"            # back on the section's list
+    assert "Medical" in app.cat_row("Physio").inner_text()
+    app.close_sheet()
     assert app.ui.locator("#sheet-root").is_hidden()
-    row = app.ui.locator('#category-list .row:has-text("Physio")')
-    assert "Medical" in row.inner_text()
 
-    # appears in the More sheet (alphabetical, with a tag) and saves from there
+    # appears in the More picker (by section, and in search with its tag) and saves from there
     app.tab("add")
     app.type_amount("60")
     app.ui.locator(".chip-more").click()
-    names = app.ui.locator("#all-categories .row-title").all_inner_texts()
-    assert len(names) == 46 and app.ui.locator("#all-categories .group-head").count() == 8      # grouped, not alphabetical
-    item = app.ui.locator('#all-categories .row:has-text("Physio")')
+    sections = app.browser_sections()
+    assert len(sections) == 8 and sum(len(names) for _, names in sections) == 46       # by section, not alphabetical
+    assert "Physio" in dict(sections)["misc"]
+    app.ui.locator("#cp-search").fill("physio")
+    item = app.ui.locator('#cp-results .row:has-text("Physio")')
     assert "Medical" in item.locator(".badge").inner_text()
-    assert app.ui.locator('#all-categories .row:has-text("Donations") .badge').inner_text() == "Donation"
+    app.ui.locator("#cp-search").fill("donations")
+    assert app.ui.locator('#cp-results .row:has-text("Donations") .badge').inner_text() == "Donation"
+    app.ui.locator("#cp-search").fill("physio")
     item.click()
     app.save()
     assert app.toast().inner_text() == "Saved $60.00 · Physio"
@@ -545,24 +550,26 @@ def test_11_categories(app):
     # counts in Tax time together with the built-in medical category
     app.add("40", "Groceries")
     app.type_amount("25.50")
-    app.ui.locator(".chip-more").click()
-    app.ui.locator('#all-categories [data-pick="misc.medical"]').click()
+    app.more_pick(cat_id="misc.medical")
     app.save()
     app.tab("summary")
     assert cents(app.ui.locator('#tax-card [data-tax="medical"] .v').inner_text()) == 6000 + 2550
 
     # hide Groceries: gone from chips and the More sheet, still in History and Summary
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Groceries")').click()
+    app.cat_edit("Groceries")
     app.ui.locator("#c-hidden").check()
     app.ui.locator("#c-save").click()
-    assert "Hidden" in app.ui.locator('#category-list .row:has-text("Groceries")').inner_text()
+    assert "Hidden" in app.cat_row("Groceries").inner_text()
+    app.close_sheet()
     app.tab("add")
     chip_names = app.ui.locator("#chips .chip-name").all_inner_texts()
     assert "Groceries" not in chip_names and len(chip_names) == 8
     app.type_amount("1")
     app.ui.locator(".chip-more").click()
-    assert "Groceries" not in app.ui.locator("#all-categories .row-title").all_inner_texts()
+    assert "Groceries" not in dict(app.browser_sections())["food"]
+    app.ui.locator("#cp-search").fill("groceries")
+    assert app.ui.locator("#cp-results").count() == 0 and app.ui.locator("#cp-status").inner_text() == 'No categories match "groceries".'
     app.page.keyboard.press("Escape")
     app.tab("history")
     assert app.ui.locator('.row[data-act="edit"]:has-text("Groceries")').count() == 1
@@ -573,25 +580,28 @@ def test_11_categories(app):
     app.ui.locator('#by-group .grp-row:has-text("Food")').click()
     assert "Groceries" in app.ui.locator("#by-group .item-row .name").all_inner_texts()
 
-    # most-used ordering of chips: Physio (1 use) now leads the unused defaults
+    # most recent first: Medical (logged last), then Physio; hidden Groceries is skipped, then the unused defaults
     app.tab("add")
-    assert app.ui.locator("#chips .chip-name").all_inner_texts()[:2] == ["Medical", "Physio"]
+    assert app.ui.locator("#chips .chip-name").all_inner_texts()[:3] == ["Medical", "Physio", "Restaurant / Take-Out"]
 
     # a built-in has no delete; a used custom one cannot be deleted; an unused one can
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Transit")').click()
+    app.cat_edit("Transit")
+    assert app.ui.locator("#c-delete").count() == 0
+    app.page.keyboard.press("Escape")                                                # up a level: Transportation's list
+    assert app.ui.locator("#sheet-title").inner_text() == "Transportation"
+    app.cat_edit("Physio")
     assert app.ui.locator("#c-delete").count() == 0
     app.page.keyboard.press("Escape")
-    app.ui.locator('#category-list .row:has-text("Physio")').click()
-    assert app.ui.locator("#c-delete").count() == 0
-    app.page.keyboard.press("Escape")
-    app.ui.locator("#btn-add-category").click()
+    app.cat_add()
     app.ui.locator("#c-name").fill("Temp")
     app.ui.locator("#c-save").click()
-    app.ui.locator('#category-list .row:has-text("Temp")').click()
+    app.cat_edit("Temp")
     app.ui.locator("#c-delete").click()
     app.ui.locator("#c-confirm-delete").click()
-    assert app.ui.locator('#category-list .row:has-text("Temp")').count() == 0
+    assert app.ui.locator("#sheet-title").inner_text() == "Miscellaneous" and app.toast().inner_text() == "Category deleted"
+    assert app.ui.locator('#cm-list .row:has-text("Temp")').count() == 0
+    assert len(app.state()["categories"]) == 46
     assert app.console_errors == []
 
 
@@ -599,9 +609,11 @@ def test_11_categories(app):
 def test_12_delete_all(app):
     app.seed(make_state(SAMPLE_ROWS, test_notice_dismissed=True))
     app.tab("profile")
-    app.ui.locator("#btn-add-category").click()
+    app.cat_add()
     app.ui.locator("#c-name").fill("Custom")
     app.ui.locator("#c-save").click()
+    app.close_sheet()
+    assert app.ui.locator("#category-summary").inner_text() == "46 categories in 8 sections"
     app.ui.locator("#btn-delete-all").click()
     go = app.ui.locator("#da-go")
     assert go.is_disabled()
@@ -622,7 +634,7 @@ def test_12_delete_all(app):
                               "autoLocation": False, "mapsNoticeShown": False, "onboarded": False, "groupsNotice": False,
                               "pay": None, "paySkipped": False}
     assert st["cards"] == [] and st["schemaVersion"] == 3
-    assert app.ui.locator('#category-list .row:has-text("Custom")').count() == 0
+    assert app.ui.locator("#category-summary").inner_text() == "45 categories in 8 sections"
     app.tab("history")
     assert "No expenses in November 2026." in app.ui.locator(".empty").inner_text()
     assert app.dialogs == []
@@ -903,8 +915,12 @@ def test_15_layout(make_app, size, scheme):
     check("details sheet")
     app.page.keyboard.press("Escape")
     app.ui.locator(".chip-more").click()
-    check("all categories sheet")
-    app.page.keyboard.press("Escape")
+    app.page.wait_for_timeout(250)
+    check("category picker")
+    app.ui.locator('#cp-tiles [data-section="misc"]').click()
+    app.page.wait_for_timeout(300)
+    check("category picker section")
+    app.close_sheet()
     app.chip("Groceries").click()
     app.save()
     check("toast")
@@ -923,7 +939,7 @@ def test_15_layout(make_app, size, scheme):
     check("summary")
     app.tab("profile")
     check("profile")
-    for opener in ["#btn-restore", "#btn-add-category", "#btn-delete-all"]:
+    for opener in ["#btn-restore", "#btn-modify-categories", "#btn-delete-all"]:
         app.ui.locator(opener).scroll_into_view_if_needed()
         app.ui.locator(opener).click()
         check(opener)
@@ -985,32 +1001,32 @@ def test_17_no_forbidden_apis_in_source():
 
 
 # ---------------------------------------------------------------- review round 2
-def test_18_chip_order_is_frozen_for_the_session(app):
+def test_18_chip_order_is_fixed_on_the_add_screen(app):
     chips = lambda: app.ui.locator("#chips .chip-name").all_inner_texts()
     start = chips()
     assert "Travel / Vacation" not in start
     for amount in ["10", "20", "30"]:
         app.type_amount(amount)
-        app.ui.locator(".chip-more").click()
-        app.ui.locator('#all-categories .row:has-text("Travel / Vacation")').click()
+        app.more_pick("Travel / Vacation")
         app.save()
         assert chips() == start
     assert len(app.expenses()) == 3
     app.ui.locator(".toast-undo").click()                 # undo does not reorder either
     assert chips() == start
-    app.tab("history")
-    app.ui.locator('.row[data-act="edit"]').first.click()  # nor does editing or deleting
+    app.tab("history")                                    # arriving from another tab re-ranks: most recent first
+    app.ui.locator('.row[data-act="edit"]').first.click()
     app.ui.locator("#e-amount").fill("11")
     app.ui.locator("#e-save").click()
     app.tab("add")
-    assert chips() == start
+    assert chips() == ["Travel / Vacation"] + start[:6] + ["More"]
     app.reload()
     assert chips() == ["Travel / Vacation"] + start[:6] + ["More"]
-    # a category change re-ranks straight away
+    # a hidden category drops out
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Travel / Vacation")').click()
+    app.cat_edit("Travel / Vacation")
     app.ui.locator("#c-hidden").check()
     app.ui.locator("#c-save").click()
+    app.close_sheet()
     app.tab("add")
     assert chips() == start
 
@@ -1054,14 +1070,14 @@ def test_19_keyboard_overlap_variable_and_sheets(app):
 def test_20_category_formula_prefix_round_trip(make_app):
     src = make_app(init_scripts=[CAPTURE_CLIPBOARD])
     src.tab("profile")
-    src.ui.locator("#btn-add-category").click()
+    src.cat_add()
     src.ui.locator("#c-name").fill("=Test")
     src.ui.locator('#c-tags label:has-text("Donation")').click()
     src.ui.locator("#c-save").click()
+    src.close_sheet()
     src.tab("add")
     src.type_amount("15")
-    src.ui.locator(".chip-more").click()
-    src.ui.locator('#all-categories .row:has-text("=Test")').click()
+    src.more_pick("=Test")
     src.save()
     text = copied_csv(src)
     row = parse_csv(text)[1]

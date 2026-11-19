@@ -68,83 +68,56 @@ def main():
         with sync_playwright() as p:
             browser = p.chromium.launch(executable_path=CHROME, headless=True)
             for scheme in ("light", "dark"):
-                # Motion is on (the confetti frame needs it); each shot waits for the motion to end.
-                # The estimate uses the site's own tax file (data/tax-ca-2026.json).
+                # Motion is on; each shot waits for it to end. The site's own card list and tax file are used.
                 app = App(browser, base, width=390, height=844, scheme=scheme, cards="real", tax="real")
                 ui = app.ui
 
-                def shot(name, wait=700):
+                def shot(name, wait=600):
                     app.page.wait_for_timeout(wait)
                     app.page.screenshot(path=os.path.join(out, f"{name}-{scheme}.png"))
 
                 state = sample_state()
-                state["settings"]["pay"] = None
-                state["settings"]["paySkipped"] = False
+                for cat in state["categories"]:
+                    if cat["id"] == "transportation.parking":
+                        cat["hidden"] = True
                 app.seed(state)
-                # Add: empty, a selected chip, ready Save
-                shot("add-1-empty")
-                app.chip("Groceries").click()
-                shot("add-2-selected-chip")
+                # Add, with the most recently logged categories first
+                shot("add-recent-chips")
+                # More: sections, a section, search results, no matches
                 app.type_amount("23.40")
-                shot("add-3-ready-save")
+                app.chip("Groceries").click()
+                ui.locator(".chip-more").click()
+                shot("more-1-sections")
+                ui.locator('#cp-tiles [data-section="food"]').click()
+                shot("more-2-section-food")
+                ui.locator("[data-sheet-back]").click()
+                ui.locator('#cp-tiles [data-section="misc"]').click()
+                shot("more-2-section-miscellaneous")
+                ui.locator("[data-sheet-back]").click()
+                ui.locator("#cp-search").fill("insur")
+                shot("more-3-search-results")
+                ui.locator("#cp-search").fill("xyz")
+                shot("more-4-no-matches")
+                app.close_sheet()
                 app.chip("Groceries").click()
                 for _ in range(5):
                     ui.locator('[data-key="back"]').click()
-                # History, and Summary (Month) with the compare button
-                app.tab("history")
-                shot("history")
-                app.tab("summary")
-                shot("summary-month-compare-button", wait=1000)
-                # Pay sheet with an estimate and a second earner
-                ui.locator("#btn-compare").click()
-                shot("pay-sheet-empty")
-                ui.locator("#pay-1").fill("85,000")
-                ui.locator("#pay-add-earner").click()
-                ui.locator("#pay-2").fill("62,500")
-                ui.locator("#pay-province").select_option("ON")
-                ui.locator("#pay-2").blur()
-                shot("pay-sheet-estimate-two-earners")
-                app.page.keyboard.press("Escape")
-                # the report with one earner, so it has both wins and groups over typical
-                state["settings"]["pay"] = {"earners": [6000000], "province": "ON", "takeHomeOverrideCents": None, "taxYear": 2026,
-                                            "updatedAt": "2026-11-15T12:00:00.000Z"}
-                app.seed(state)
-                app.tab("summary")
-                ui.locator("#btn-compare").click()
-                ui.locator("#report").wait_for()
-                # Report: score, a win (a confetti frame), an over with its tip, savings, wrap-up
-                shot("report-1-score")
-                kinds = ui.locator("#report .rp-card").evaluate_all("(els) => els.map((e) => e.dataset.kind)")
-                done = set()
-                for i, kind in enumerate(kinds[1:], start=1):
-                    ui.locator("#rp-next").click()
-                    name = {"win": "report-2-win-confetti", "over": "report-3-over-with-tip", "savings": "report-4-savings",
-                            "notlogged": "report-5-not-logged", "wrap": "report-6-wrap-up"}[kind]
-                    if kind in done:
-                        app.page.wait_for_timeout(500)
-                        continue
-                    done.add(kind)
-                    shot(name, wait=330 if kind == "win" else 1100)
-                app.page.keyboard.press("Escape")
-                # the same report without pay (spending split)
-                split = sample_state()
-                split["settings"]["pay"] = None
-                split["settings"]["paySkipped"] = True
-                saved_pay = app.state()["settings"]["pay"]
-                app.seed(split)
-                app.tab("summary")
-                ui.locator("#btn-compare").click()
-                ui.locator("#report").wait_for()
-                shot("report-split-score")
-                app.page.keyboard.press("Escape")
-                # Profile with the Pay row
-                split["settings"]["pay"] = saved_pay
-                split["settings"]["paySkipped"] = False
-                app.seed(split)
+                # Profile with Modify categories
                 app.tab("profile")
-                ui.locator("#pay-summary").wait_for()
-                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('pay-settings').offsetTop - 120; }")
-                shot("profile-pay-row")
+                ui.locator("#view").evaluate("(v) => { v.scrollTop = document.getElementById('category-settings').offsetTop - 260; }")
+                shot("profile-modify-categories")
+                # Manager: sections, a section with a hidden item, the edit sheet opened from it, search
+                ui.locator("#btn-modify-categories").click()
+                shot("manager-1-sections")
+                ui.locator('#cp-tiles [data-section="transportation"]').click()
+                shot("manager-2-section-with-hidden")
+                ui.locator('#cm-list .row:has-text("Parking")').click()
+                shot("manager-3-edit-sheet")
+                ui.locator("[data-sheet-back]").click()
+                ui.locator("[data-sheet-back]").click()
+                ui.locator("#cp-search").fill("park")
+                shot("manager-4-search-with-hidden")
+                app.close_sheet()
                 app.close()
             browser.close()
     finally:

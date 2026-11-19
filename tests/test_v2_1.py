@@ -395,11 +395,11 @@ def test_08_chart_cap(app):
 # ---------------------------------------------------------------- 9
 def test_09_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.4';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "const VERSION = '0.2.5';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
     assert not re.search(r"0\.2\.[0123]", sw + source("app.js"))
     app = make_app(service_workers="allow", cards=None, tax=None)
-    wait_cached(app.page, cache="ds-0.2.4")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]
+    wait_cached(app.page, cache="ds-0.2.5")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.5"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.4"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.5"
     assert app.console_errors == []

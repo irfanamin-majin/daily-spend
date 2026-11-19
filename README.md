@@ -6,11 +6,11 @@ It is a plain static web app (HTML, CSS and JavaScript, no build step, no depend
 
 ## What it does
 
-- **Add**: an in-page keypad, category chips, a Save button that turns green once the amount and category are in, and a one-line details row for the date, payment method or card, merchant, note and location.
+- **Add**: an in-page keypad, chips for the categories you logged most recently, a More picker (search, or pick a section and then a category), a Save button that turns green once the amount and category are in, and a one-line details row for the date, payment method or card, merchant, note and location.
 - **Quick repeat**: log an earlier expense again today from the Recent sheet, a swipe, or the Edit sheet.
 - **Merchant memory**: a merchant you have used before offers its usual category.
 - **History**: search by merchant or note, filter by category, by card or whole institution, or by location; swipe a row to delete or repeat it.
-- **Categories**: 45 everyday items arranged in 8 fixed budget groups (Housing, Debt Payments, Communications, Food, Transportation, Recreation, Miscellaneous, Insurance). You can add, rename, move and hide items.
+- **Categories**: 45 everyday items arranged in 8 fixed budget groups (Housing, Debt Payments, Communications, Food, Transportation, Recreation, Miscellaneous, Insurance). You can add, rename, move and hide items under **Profile → Modify categories**, which opens the same section-first view with search.
 - **Summary**: for the month, the last 3 months or the last 12; a donut by group and bars per day or per month that you can tap, each group opening to its items, totals by card, and a Tax time card for medical, donation and childcare categories.
 - **How do you compare?**: a button on Summary opens a swipeable report that sets your spending by group against a typical Canadian budget. Enter your annual pay and province for an estimated take-home, type your own monthly take-home, or skip pay and compare how your spending splits.
 - **Profile**: your cards (picked from a built-in Canadian list or added by hand), location setting, categories, pay for the comparison, CSV backup and restore.
@@ -69,7 +69,7 @@ python3 -m pytest tests -q
 
 - The tests start their own local server and open the site from a subpath, the way GitHub Pages serves it.
 - Chrome is expected at `/usr/bin/google-chrome`. Change `CHROME` in `tests/conftest.py` if yours is elsewhere.
-- `tests/test_v1.py` holds the original acceptance tests; `tests/test_v2.py` covers offline use, location, cards, charts, quick repeat, search, swipes, first-run setup, backups and data migration; `tests/test_v2_1.py` covers the card picker and chart scaling; `tests/test_v2_2.py` covers budget groups, the move from the old categories, and institution badges; `tests/test_v2_3.py` covers the Save button, the institution filter, group colours and time ranges; `tests/test_v2_4.py` covers motion, the light theme's contrast, the Pay sheet, the take-home estimator and the comparison report.
+- `tests/test_v1.py` holds the original acceptance tests; `tests/test_v2.py` covers offline use, location, cards, charts, quick repeat, search, swipes, first-run setup, backups and data migration; `tests/test_v2_1.py` covers the card picker and chart scaling; `tests/test_v2_2.py` covers budget groups, the move from the old categories, and institution badges; `tests/test_v2_3.py` covers the Save button, the institution filter, group colours and time ranges; `tests/test_v2_4.py` covers motion, the light theme's contrast, the Pay sheet, the take-home estimator and the comparison report; `tests/test_v2_5.py` covers the most-recent chip order, the category picker and its search, and the category manager.
 - The estimator is tested against made-up round figures in `tests/conftest.py`, worked by hand in the test's comments. If `data/tax-ca-2026.json` lists `referenceCases`, each one is also checked to within $1; with none, that test is skipped.
 - Screenshots: `python3 tests/take_screenshots.py <output folder>`.
 

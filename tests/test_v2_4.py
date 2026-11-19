@@ -104,7 +104,7 @@ def test_01_motion_does_not_block(make_app):
     app.ui.locator("#details-row").click()
     app.ui.locator("#d-done").click()
     app.ui.locator(".chip-more").click()
-    assert app.ui.locator("#fx-layer .fx-ghost").count() == 0 and app.ui.locator("#all-categories").is_visible()
+    assert app.ui.locator("#fx-layer .fx-ghost").count() == 0 and app.ui.locator("#cp-tiles").is_visible()
     app.page.keyboard.press("Escape")
 
     # select a chip and press Save at once: the expense saves; a burst is drawn in the layer
@@ -889,15 +889,15 @@ def test_10_no_external_requests_and_no_template_name(app):
 # ---------------------------------------------------------------- 11
 def test_11_version_and_assets(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.4';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "const VERSION = '0.2.5';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
     assets = re.findall(r"'([^']+)'", sw[sw.index("const ASSETS"):sw.index("];", sw.index("const ASSETS"))])
     assert "tax.js" in assets and "data/tax-ca-2026.json" in assets and len(assets) == 12
-    assert "version: '0.2.4'," in source("app.js") and not re.search(r"0\.2\.[0123]\b", sw + source("app.js"))
+    assert "version: '0.2.5'," in source("app.js") and not re.search(r"0\.2\.[01234]\b", sw + source("app.js"))
     app = make_app(service_workers="allow", cards=None, tax=None)
-    wait_cached(app.page, cache="ds-0.2.4")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]
-    cached = app.page.evaluate("caches.open('ds-0.2.4').then((c) => c.keys()).then((ks) => ks.map((k) => new URL(k.url).pathname.split('/').slice(-2).join('/')))")
+    wait_cached(app.page, cache="ds-0.2.5")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.5"]
+    cached = app.page.evaluate("caches.open('ds-0.2.5').then((c) => c.keys()).then((ks) => ks.map((k) => new URL(k.url).pathname.split('/').slice(-2).join('/')))")
     assert any(k.endswith("/tax.js") for k in cached) and "data/tax-ca-2026.json" in cached
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.4"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.5"
     assert app.console_errors == []

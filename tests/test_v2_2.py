@@ -38,14 +38,16 @@ def test_01_fresh_state_groups_items_and_chips(app):
     assert app.ui.locator("#chips .chip-group").count() == 0
     emoji = app.ui.locator("#chips .chip-emoji").all_inner_texts()
     assert emoji[:3] == ["🛒", "🍔", "⛽"]
-    # the More sheet: every item under the 8 group headings, in order
+    # the More picker: the 8 sections in order, every item inside its own section, in order
     app.type_amount("9")
     app.ui.locator(".chip-more").click()
-    assert heads(app, "#all-categories") == GROUP_NAMES
-    assert app.ui.locator("#all-categories .row-title").all_inner_texts() == [i[1] for i in ITEMS]
-    order = app.ui.locator("#all-categories > *").evaluate_all("(els) => els.map((e) => e.dataset.group || e.dataset.pick.split('.')[0])")
-    assert order == sorted(order, key=[g[0] for g in GROUPS].index)                    # each item sits under its own heading
-    app.ui.locator('#all-categories [data-pick="insurance.life-insurance"]').click()
+    assert app.ui.locator("#cp-tiles .cp-name").all_inner_texts() == GROUP_NAMES
+    sections = app.browser_sections()
+    assert [s for s, _ in sections] == [g[0] for g in GROUPS]
+    assert [name for _, names in sections for name in names] == [i[1] for i in ITEMS]
+    for section, names in sections:
+        assert names == [i[1] for i in ITEMS if i[0] == section]                          # each item sits in its own section
+    app.more_pick(cat_id="insurance.life-insurance")
     app.save()
     assert app.toast().inner_text() == "Saved $9.00 · Life Insurance"
     assert app.expenses()[0]["categoryId"] == "insurance.life-insurance"
@@ -63,7 +65,7 @@ def test_01b_confusable_chips_show_their_group(app):
     rows = [("2026-11-10", 100, "housing.gas-hydro", "credit", "", "")] * 3 + [("2026-11-11", 100, "gas", "credit", "", "")] * 2
     app.seed(make_state(rows))
     names = app.ui.locator("#chips .chip-name").all_inner_texts()
-    assert names[:2] == ["Gas & Hydro", "Gas / Diesel"]
+    assert names[:2] == ["Gas / Diesel", "Gas & Hydro"]                                 # most recent first
     assert app.ui.locator('.chip[data-cat="housing.gas-hydro"] .chip-group').inner_text() == "Housing"
     assert app.ui.locator('.chip[data-cat="transportation.gas-diesel"] .chip-group').inner_text() == "Transportation"
     assert app.ui.locator("#chips .chip-group").count() == 2
@@ -129,7 +131,10 @@ def test_02_migration_from_v2(make_app):
 
     # and the app shows it
     assert "Gifts" not in app.ui.locator("#chips .chip-name").all_inner_texts()
-    assert "Coffee runs" in app.ui.locator("#chips .chip-name").all_inner_texts()
+    app.ui.locator(".chip-more").click()
+    food = dict(app.browser_sections())["food"]
+    assert "Coffee runs" in food and "Gifts" not in dict(app.browser_sections())["misc"]
+    app.close_sheet()
     app.tab("history")
     assert cents(app.ui.locator("#month-total").inner_text()) == sum(r[1] for r in rows if r[0].startswith("2026-11"))
     assert app.ui.locator('.row[data-id="seed-001"] .row-title').inner_text() == "Coffee runs"
@@ -138,7 +143,9 @@ def test_02_migration_from_v2(make_app):
     assert cents(app.ui.locator('#tax-card [data-tax="medical"] .v').inner_text()) == (1000 + 11 * 111) + 5500
     # the notice shows once, and the migration runs once
     app.tab("add")
-    app.add("1", "Transit")
+    app.type_amount("1")
+    app.more_pick("Transit")
+    app.save()
     app.page.reload()
     app.ui.locator("#amount").wait_for()
     app.page.wait_for_timeout(200)
@@ -278,12 +285,15 @@ def test_04_tax_time(app):
         "Totals of tagged categories. Only private health plan premiums count; provincial plan premiums don't.")
     tags = {c["name"]: c["taxTag"] for c in app.state()["categories"]}
     assert tags["Gifts"] is None and tags["Health / Dental Insurance"] == "medical" and tags["Life Insurance"] is None
-    # the tag shows in the More sheet
+    # the tag shows in the More picker's search results
     app.tab("add")
     app.type_amount("1")
     app.ui.locator(".chip-more").click()
-    assert app.ui.locator('#all-categories [data-pick="insurance.health-dental-insurance"] .badge').inner_text() == "Medical"
-    assert app.ui.locator('#all-categories [data-pick="misc.gifts"] .badge').count() == 0
+    app.ui.locator("#cp-search").fill("dental")
+    assert app.ui.locator('#cp-results [data-pick="insurance.health-dental-insurance"] .badge').inner_text() == "Medical"
+    app.ui.locator("#cp-search").fill("gifts")
+    assert app.ui.locator('#cp-results [data-pick="misc.gifts"]').count() == 1
+    assert app.ui.locator('#cp-results [data-pick="misc.gifts"] .badge').count() == 0
 
 
 # ---------------------------------------------------------------- 5
@@ -353,9 +363,10 @@ def test_05_csv_v3(make_app):
     assert ex["o-1"]["amountCents"] == 1250 and ex["o-3"]["paymentMethodId"] == "etransfer"
     # an old name still finds its item after the user renamed it
     old.tab("profile")
-    old.ui.locator('#category-list .row:has-text("Restaurant / Take-Out")').click()
+    old.cat_edit("Restaurant / Take-Out")
     old.ui.locator("#c-name").fill("Eating out")
     old.ui.locator("#c-save").click()
+    old.close_sheet()
     assert "Restored 1 expense." in restore(old, "date,amount,category\r\n2026-11-11,9.00,Dining & coffee\r\n")
     assert [e for e in old.expenses() if e["amountCents"] == 900][0]["categoryId"] == "food.restaurant-take-out"
     assert len(old.state()["categories"]) == 46
@@ -366,13 +377,22 @@ def test_05_csv_v3(make_app):
 # ---------------------------------------------------------------- 6
 def test_06_categories_screen(app):
     app.tab("profile")
-    assert heads(app, "#category-list") == [g[1] for g in GROUPS]
-    assert app.ui.locator("#category-list .row-title").all_inner_texts() == [i[1] for i in ITEMS]
-    position = lambda name: app.ui.locator("#category-list > *").evaluate_all(
-        "(els, name) => { let g = null; for (const e of els) { if (e.dataset.group) g = e.dataset.group; else if (e.textContent.includes(name)) return g; } return null; }", name)
+    app.ui.locator("#btn-modify-categories").click()
+    assert app.ui.locator("#sheet-title").inner_text() == "Categories"
+    assert app.ui.locator("#cp-tiles .cp-name").all_inner_texts() == [g[1] for g in GROUPS]
+    listed = app.browser_sections()
+    assert [name for _, names in listed for name in names] == [i[1] for i in ITEMS]
+
+    def position(name):
+        """The section whose list shows the item in the manager."""
+        app.close_sheet()
+        app.ui.locator("#btn-modify-categories").click()
+        found = [section for section, names in app.browser_sections() if name in names]
+        app.close_sheet()
+        return found[0] if len(found) == 1 else found
 
     # add an item to a chosen group
-    app.ui.locator("#btn-add-category").click()
+    app.cat_add()
     assert app.ui.locator("#c-group option").count() == 8
     assert app.ui.locator("#c-group").input_value() == "misc"                           # Miscellaneous unless chosen
     app.ui.locator("#c-name").fill("groceries")
@@ -382,6 +402,7 @@ def test_06_categories_screen(app):
     app.ui.locator("#c-emoji").fill("🥖")
     app.ui.locator("#c-group").select_option("food")
     app.ui.locator("#c-save").click()
+    app.close_sheet()
     bakery = [c for c in app.state()["categories"] if c["name"] == "Bakery"][0]
     assert (bakery["groupId"], bakery["builtIn"], bakery["taxTag"], bakery["emoji"]) == ("food", False, None, "🥖")
     assert position("Bakery") == "food"
@@ -389,20 +410,22 @@ def test_06_categories_screen(app):
     app.tab("add")
     app.type_amount("6.50")
     app.ui.locator(".chip-more").click()
-    order = app.ui.locator("#all-categories > *").evaluate_all("(els) => els.map((e) => e.dataset.group || e.querySelector('.row-title').textContent)")
-    assert order[order.index("food") + 1:order.index("transportation")] == ["Groceries", "Restaurant / Take-Out", "Bakery"]
-    app.ui.locator(f'#all-categories [data-pick="{bakery["id"]}"]').click()
+    assert dict(app.browser_sections())["food"] == ["Groceries", "Restaurant / Take-Out", "Bakery"]
+    app.more_pick("Bakery")
     app.save()
     assert app.toast().inner_text() == "Saved $6.50 · Bakery"
 
     # rename, change group, change tax tag
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Bakery")').click()
+    app.cat_edit("Bakery")
     assert app.ui.locator("#c-group").input_value() == "food"
     app.ui.locator("#c-name").fill("Bakery & deli")
     app.ui.locator("#c-group").select_option("recreation")
     app.ui.locator('#c-tags label:has-text("Donation")').click()
     app.ui.locator("#c-save").click()
+    assert app.ui.locator("#sheet-title").inner_text() == "Food"                         # back where it was opened from
+    assert app.ui.locator("#cm-list .row-title").all_inner_texts() == ["Groceries", "Restaurant / Take-Out"]
+    app.close_sheet()
     moved = [c for c in app.state()["categories"] if c["id"] == bakery["id"]][0]
     assert (moved["name"], moved["groupId"], moved["taxTag"]) == ("Bakery & deli", "recreation", "donation")
     assert position("Bakery & deli") == "recreation" and position("Groceries") == "food"
@@ -412,41 +435,45 @@ def test_06_categories_screen(app):
 
     # hide: gone from Add, kept in History
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Bakery & deli")').click()
+    app.cat_edit("Bakery & deli")
     app.ui.locator("#c-hidden").check()
     app.ui.locator("#c-save").click()
-    assert "Hidden" in app.ui.locator('#category-list .row:has-text("Bakery & deli")').inner_text()
+    assert "Hidden" in app.cat_row("Bakery & deli").inner_text()
+    app.close_sheet()
     app.tab("add")
     app.type_amount("1")
     app.ui.locator(".chip-more").click()
-    assert "Bakery & deli" not in app.ui.locator("#all-categories .row-title").all_inner_texts()
-    assert app.ui.locator("#all-categories .row").count() == 45
+    names = [name for _, names in app.browser_sections() for name in names]
+    assert "Bakery & deli" not in names and len(names) == 45
     app.page.keyboard.press("Escape")
     app.tab("history")
     assert app.ui.locator('.row[data-act="edit"] .row-title').inner_text() == "Bakery & deli"
 
     # built-in items: can be hidden, renamed and moved, never deleted; a used custom item cannot be deleted either
     app.tab("profile")
-    app.ui.locator('#category-list .row:has-text("Property / Tenant Insurance")').click()
+    app.cat_edit("Property / Tenant Insurance")
     assert app.ui.locator("#c-delete").count() == 0 and app.ui.locator("#c-name").input_value() == "Property / Tenant Insurance"
     app.ui.locator("#c-group").select_option("insurance")
     app.ui.locator("#c-hidden").check()
     app.ui.locator("#c-save").click()
+    app.close_sheet()
     item = [c for c in app.state()["categories"] if c["id"] == "housing.property-tenant-insurance"][0]
     assert (item["name"], item["groupId"], item["hidden"], item["builtIn"]) == ("Property / Tenant Insurance", "insurance", True, True)
     assert position("Property / Tenant Insurance") == "insurance"
-    app.ui.locator('#category-list .row:has-text("Bakery & deli")').click()
+    app.cat_edit("Bakery & deli")
     assert app.ui.locator("#c-delete").count() == 0
     app.page.keyboard.press("Escape")
-    app.ui.locator("#btn-add-category").click()
+    app.cat_add()
     app.ui.locator("#c-name").fill("Temp")
     app.ui.locator("#c-save").click()
-    app.ui.locator('#category-list .row:has-text("Temp")').click()
+    app.cat_edit("Temp")
     app.ui.locator("#c-delete").click()
     app.ui.locator("#c-confirm-delete").click()
     assert len(app.state()["categories"]) == 46
-    # groups themselves are fixed: nothing to add, rename or delete
-    assert app.ui.locator("#category-list .group-head button, #category-list button.group-head").count() == 0
+    # sections themselves are fixed: a tile only opens its list; nothing to add, rename or delete
+    app.ui.locator("[data-sheet-back]").click()
+    assert app.ui.locator("#cp-tiles .cp-tile").count() == 8 and app.ui.locator("#cp-tiles input, #cp-tiles [data-edit]").count() == 0
+    app.close_sheet()
     app.reload()
     assert [c for c in app.state()["categories"] if c["id"] == bakery["id"]][0]["groupId"] == "recreation"   # survives a reload
     assert app.console_errors == []
@@ -587,11 +614,11 @@ def test_07b_badges_sections_and_other_places(app):
 # ---------------------------------------------------------------- 8
 def test_08_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.4';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
-    assert "version: '0.2.4'," in source("app.js") and not re.search(r"0\.2\.[0123]\b", sw + source("app.js"))
+    assert "const VERSION = '0.2.5';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "version: '0.2.5'," in source("app.js") and not re.search(r"0\.2\.[01234]\b", sw + source("app.js"))
     app = make_app(service_workers="allow", cards=None, tax=None)
-    wait_cached(app.page, cache="ds-0.2.4")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]
+    wait_cached(app.page, cache="ds-0.2.5")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.5"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.4"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.5"
     assert app.console_errors == []

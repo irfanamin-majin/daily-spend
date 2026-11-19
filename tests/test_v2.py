@@ -26,7 +26,7 @@ FAILED = "Couldn't get your location. Try again in a moment."
 CALGARY = {"latitude": 51.0447123, "longitude": -114.0718832, "accuracy": 25}
 PIN = {"lat": 51.04471, "lng": -114.07188, "accuracyM": 25, "capturedAt": "2026-11-10T18:00:00.000Z"}
 MAPS = "https://www.google.com/maps/search/?api=1&query=51.04471,-114.07188"
-CACHE = "ds-0.2.4"
+CACHE = "ds-0.2.5"
 # A location service the test controls: each request waits until the test answers it.
 STUB_GEO = """
   window.__geo = [];
@@ -248,7 +248,7 @@ def test_04_manifest_and_icons():
     for a in assets:
         assert os.path.isfile(os.path.join(ROOT, "index.html" if a == "./" else a)), a
     assert all(os.path.join("icons", os.path.basename(i["src"])) in [a.replace("/", os.sep) for a in assets] for i in icons)
-    assert "const VERSION = '0.2.4';" in sw and "version: '0.2.4'," in source("app.js")
+    assert "const VERSION = '0.2.5';" in sw and "version: '0.2.5'," in source("app.js")
     assert os.path.isfile(os.path.join(ROOT, ".nojekyll")) and os.path.isfile(os.path.join(ROOT, "README.md"))
     cards = json.loads(source("data/cards-ca.json"))
     assert {"version", "lastChecked", "issuers", "cards"} <= set(cards)

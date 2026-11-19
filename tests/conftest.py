@@ -239,6 +239,54 @@ class App:
     def toast(self):
         return self.ui.locator("#toast-region .toast-text")
 
+    # ----- the category browser (the More chip, and Modify categories on Profile)
+    def category(self, name=None, cat_id=None):
+        return [c for c in self.state()["categories"] if (c["id"] == cat_id if cat_id else c["name"] == name)][0]
+
+    def close_sheet(self):
+        if not self.sheet_hidden():
+            self.ui.locator("[data-sheet-close]").first.click()
+
+    def more_pick(self, name=None, cat_id=None):
+        """On Add: More, the category's section tile, then its chip. Selects it; nothing is saved."""
+        cat = self.category(name, cat_id)
+        if self.sheet_hidden():
+            self.ui.locator(".chip-more").click()
+        self.ui.locator(f'#cp-tiles [data-section="{cat["groupId"]}"]').click()
+        self.ui.locator(f'#cp-chips [data-pick="{cat["id"]}"]').click()
+
+    def browser_sections(self):
+        """With the browser on its sections view: [(section id, [category names])], by opening each tile in turn."""
+        out = []
+        for section in self.ui.locator("#cp-tiles .cp-tile").evaluate_all("(els) => els.map((e) => e.dataset.section)"):
+            self.ui.locator(f'#cp-tiles [data-section="{section}"]').click()
+            out.append((section, self.ui.locator("#cp-chips .chip-name, #cm-list .row-title").all_inner_texts()))
+            self.ui.locator("[data-sheet-back]").click()
+        return out
+
+    def manage_section(self, section):
+        """On Profile: the category manager, showing one section's list."""
+        if self.sheet_hidden():
+            self.ui.locator("#btn-modify-categories").click()
+        shown = self.ui.locator("#cm-list")
+        if shown.count() and shown.get_attribute("data-section") != section:
+            self.ui.locator("[data-sheet-back]").click()
+        if not self.ui.locator("#cm-list").count():
+            self.ui.locator(f'#cp-tiles [data-section="{section}"]').click()
+        return self.ui.locator("#cm-list")
+
+    def cat_row(self, name):
+        """The category's row in the manager (opens its section first)."""
+        return self.manage_section(self.category(name)["groupId"]).locator(f'.row:has(.row-title:text-is("{name}"))')
+
+    def cat_edit(self, name):
+        self.cat_row(name).click()
+        self.ui.locator("#c-name").wait_for()
+
+    def cat_add(self, section="misc"):
+        self.manage_section(section).locator("#cm-add").click()
+        self.ui.locator("#c-name").wait_for()
+
     def sheet_hidden(self):
         return self.ui.locator("#sheet-root").is_hidden()
 

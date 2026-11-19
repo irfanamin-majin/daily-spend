@@ -6,7 +6,7 @@
    ===================================================================== */
 const STRINGS = {
   appName: 'Daily Spend',
-  version: '0.2.4',
+  version: '0.2.5',
   versionLabel: (v) => `Version ${v}`,
   privacy: 'Your entries stay on this device. No account, no tracking. Nothing is sent anywhere, except that opening a location in Google Maps shares that location with Google.',
   tabs: { add: 'Add', history: 'History', summary: 'Summary', profile: 'Profile' },
@@ -47,7 +47,16 @@ const STRINGS = {
   note: 'Note',
   notePlaceholder: 'Optional',
   suggestionsLabel: 'Earlier merchants',
-  allCategoriesTitle: 'All categories',
+  chooseCategory: 'Choose a category',
+  searchCategories: 'Search categories',
+  nCategories: (n) => `${n} ${n === 1 ? 'category' : 'categories'}`,
+  nCategoriesFound: (n) => `${n} ${n === 1 ? 'category' : 'categories'} found`,
+  noCategoryMatch: (query) => `No categories match "${query}".`,
+  sectionLabel: (name, count) => `${name}, ${count}`,
+  selectedCategory: (name) => `Selected: ${name}`,
+  modifyCategories: 'Modify categories',
+  categorySummary: (n, sections) => `${n} ${n === 1 ? 'category' : 'categories'} in ${sections} sections`,
+  nHidden: (n) => `${n} hidden`,
   // History
   prevMonth: 'Previous month',
   nextMonth: 'Next month',
@@ -1034,16 +1043,22 @@ function restoreExpense(expense) {
   saveState();
 }
 
-// Seven most used visible items over the last 90 days. Ties, and a new user's chips, follow
+// The seven visible items used most recently, newest first, by when the expense was logged
+// (createdAt, not the expense date). Ties, items never used and a new user's chips follow
 // DEFAULT_CHIP_IDS first and then the item order.
 function rankTopCategories() {
-  const since = daysAgoStr(90);
-  const counts = new Map();
-  state.expenses.forEach((e) => { if (e.date >= since) counts.set(e.categoryId, (counts.get(e.categoryId) || 0) + 1); });
+  const last = new Map();
+  state.expenses.forEach((e) => {
+    const at = String(e.createdAt || '');
+    if (at > (last.get(e.categoryId) || '')) last.set(e.categoryId, at);
+  });
   const pref = (c) => { const i = DEFAULT_CHIP_IDS.indexOf(c.id); return i === -1 ? 1000 + c.order : i; };
   return state.categories
     .filter((c) => !c.hidden)
-    .sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0) || pref(a) - pref(b))
+    .sort((a, b) => {
+      const x = last.get(a.id) || '', y = last.get(b.id) || '';
+      return (x < y ? 1 : x > y ? -1 : 0) || pref(a) - pref(b);
+    })
     .slice(0, 7);
 }
 
@@ -1408,11 +1423,13 @@ const ui = {
   summaryGroup: null,         // group opened inside Summary, or null for the overview
   openGroups: new Set(),      // groups expanded in the By group list
   drawCharts: false,          // play the chart draw animation on the next Summary render
-  chipIds: []                 // frozen chip order, see refreshChips()
+  chipIds: []                 // chip order, see refreshChips()
 };
 
-// The chip line-up is frozen for the session so chips never move under the thumb.
-// It is ranked at launch and again only when the category list itself changes.
+// The chip line-up never changes while the Add screen is in use, so chips never move under the
+// thumb. It is ranked at launch, on arriving at the Add tab from another tab, on coming back to
+// the foreground with an empty draft, and when the category list itself changes (on Profile).
+const draftIsEmpty = () => typedToCents(ui.amount) <= 0 && !ui.draft.categoryId;
 function refreshChips() { ui.chipIds = rankTopCategories().map((c) => c.id); }
 function topCategories() {
   return ui.chipIds.map((id) => state.categories.find((c) => c.id === id)).filter((c) => c && !c.hidden);
@@ -1606,8 +1623,10 @@ function closeSheet() {
   watchKeyboard(false);
   el.app.inert = false;
   el.app.removeAttribute('aria-hidden');
-  if (opener && document.contains(opener) && typeof opener.focus === 'function') {
-    try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  // The view may have been drawn again while the sheet was open: find the opener's replacement by id.
+  const target = opener && !document.contains(opener) && opener.id ? document.getElementById(opener.id) : opener;
+  if (target && document.contains(target) && typeof target.focus === 'function') {
+    try { target.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   }
   if (onClose) onClose();
 }
@@ -1679,6 +1698,7 @@ function render() {
 }
 
 function switchTab(tab) {
+  if (tab === 'add' && ui.tab !== 'add') refreshChips();      // most recent first, as of arriving
   ui.tab = tab;
   ui.summaryGroup = null;
   ui.drawCharts = tab === 'summary';
@@ -1842,8 +1862,8 @@ function refreshUsual() {
   if (slot) slot.innerHTML = usualPillHtml();
 }
 
-// The seven chips of this session. A category picked elsewhere (More, Usual) that is not among
-// them borrows the seventh slot for this entry only; the frozen order returns afterwards.
+// The seven chips. A category picked elsewhere (More, Usual) that is not among
+// them borrows the seventh slot for this entry only; the order returns afterwards.
 function visibleChips() {
   const top = topCategories();
   const picked = ui.draft.categoryId ? state.categories.find((c) => c.id === ui.draft.categoryId && !c.hidden) : null;
@@ -2057,22 +2077,119 @@ function tagBadge(cat) {
   return cat.taxTag ? `<span class="badge">${esc(STRINGS.taxTags[cat.taxTag])}</span>` : '';
 }
 
-const groupHeadHtml = (group) =>
-  `<p class="group-head" data-group="${group.id}"><span aria-hidden="true">${esc(group.emoji)}</span> ${esc(group.name)}</p>`;
+/* ----- The category browser: sections first, then a section's categories, with a search box.
+   One component, two modes. 'pick' (the More chip) shows visible categories as chips and selects one.
+   'manage' (Profile) shows every category as a row and opens the edit sheet.
+   view: { kind: 'sections', query } or { kind: 'section', groupId }. ----- */
+function categoriesInSection(groupId, includeHidden) {
+  return state.categories.filter((c) => c.groupId === groupId && (includeHidden || !c.hidden)).sort((a, b) => a.order - b.order);
+}
 
-// The More sheet: every visible item under its group heading. Picking one selects it and closes the sheet.
-function openAllCategoriesSheet() {
-  const rows = itemsByGroup(false).map(({ group, items }) => groupHeadHtml(group) + items.map((c) =>
-    `<button type="button" class="row" data-pick="${esc(c.id)}" aria-pressed="${c.id === ui.draft.categoryId}">
-       <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
-       <span class="row-text"><span class="row-title">${esc(c.name)}</span></span>${tagBadge(c)}</button>`).join('')).join('');
-  const node = openSheet(STRINGS.allCategoriesTitle, `<div class="sheet-list" id="all-categories">${rows}</div>`);
-  node.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-pick]');
-    if (!btn) return;
-    closeSheet();
-    selectCategory(btn.dataset.pick, false);       // selects; the Save button saves
+// Names that start with the query, then names that contain it, then matches on the section name only.
+// Within each: section order, then item order.
+function searchCategories(query, includeHidden) {
+  const q = fold(query.trim());
+  if (!q) return [];
+  const found = [];
+  GROUPS.forEach((group, gi) => {
+    const inSection = fold(group.name).indexOf(q) !== -1;
+    categoriesInSection(group.id, includeHidden).forEach((cat) => {
+      const at = fold(cat.name).indexOf(q);
+      const rank = at === 0 ? 0 : at > 0 ? 1 : inSection ? 2 : -1;
+      if (rank !== -1) found.push({ cat, group, rank, gi });
+    });
   });
+  return found.sort((a, b) => a.rank - b.rank || a.gi - b.gi || a.cat.order - b.cat.order);
+}
+
+function categoryRowHtml(cat, attr, sub) {
+  return `<button type="button" class="row" ${attr}="${esc(cat.id)}">
+     <span class="row-emoji" aria-hidden="true">${esc(cat.emoji)}</span>
+     <span class="row-text"><span class="row-title">${esc(cat.name)}</span>${sub ? `<span class="row-sub">${esc(sub)}</span>` : ''}</span>
+     ${tagBadge(cat)}${cat.hidden ? `<span class="badge muted">${esc(STRINGS.hidden)}</span>` : ''}${attr === 'data-edit' ? ICONS.chev : ''}</button>`;
+}
+
+function openCategoryBrowser(mode, view, slide) {
+  const manage = mode === 'manage';
+  const at = view || { kind: 'sections', query: '' };
+  const pick = (id) => { closeSheet(); selectCategory(id, false); };          // selects; the Save button saves
+  // The edit and add sheets come back to the view they were opened from.
+  const edit = (id, groupId) => openCategorySheet(id, {
+    groupId,
+    back: () => openCategoryBrowser(mode, at.kind === 'section' ? at : { kind: 'sections', query: at.query }, 'back')
+  });
+
+  if (at.kind === 'section') {
+    const group = GROUPS.find((g) => g.id === at.groupId);
+    if (!group) { openCategoryBrowser(mode, null, slide); return; }
+    const cats = categoriesInSection(group.id, manage);
+    const body = manage
+      ? `<div class="sheet-list" id="cm-list" data-section="${group.id}">${cats.map((c) => categoryRowHtml(c, 'data-edit')).join('')}
+           <button type="button" class="row plain row-action" id="cm-add">${esc(STRINGS.addCategory)}</button></div>`
+      : `<div class="chips cp-chips" id="cp-chips" data-section="${group.id}">${cats.map((c) =>
+           chipHtml(c, c.id === ui.draft.categoryId, null).replace('data-act="chip" data-cat=', 'data-pick=')).join('')}</div>`;
+    const node = openSheet(group.name, body, {
+      back: () => openCategoryBrowser(mode, { kind: 'sections', query: '' }, 'back'),
+      slide: slide || 'fwd', focusTitle: true
+    });
+    node.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-pick]');
+      if (chip) { pick(chip.dataset.pick); return; }
+      const row = e.target.closest('[data-edit]');
+      if (row) { edit(row.dataset.edit); return; }
+      if (e.target.closest('#cm-add')) edit(null, group.id);
+    });
+    return;
+  }
+
+  const picked = !manage && ui.draft.categoryId ? state.categories.find((c) => c.id === ui.draft.categoryId && !c.hidden) : null;
+  const tiles = () => {
+    let shown = 0;
+    return `<div class="cp-tiles" id="cp-tiles">${GROUPS.map((group, i) => {
+      const count = categoriesInSection(group.id, manage).length;
+      if (!count && !manage) return '';
+      const sel = picked && picked.groupId === group.id ? STRINGS.selectedCategory(picked.name) : '';
+      const label = STRINGS.sectionLabel(group.name, STRINGS.nCategories(count)) + (sel ? ', ' + sel : '');
+      return `<button type="button" class="cp-tile gc${i}${sel ? ' selected' : ''}" data-section="${group.id}" style="--i:${shown++}" aria-label="${esc(label)}">
+         <span class="cp-emoji" aria-hidden="true">${esc(group.emoji)}</span>
+         <span class="cp-text"><span class="cp-name">${esc(group.name)}</span>
+           <span class="cp-count">${esc(STRINGS.nCategories(count))}</span>
+           ${sel ? `<span class="cp-selected">${esc(sel)}</span>` : ''}</span>
+         ${sel ? '<span class="cp-check" aria-hidden="true">✓</span>' : ''}</button>`;
+    }).join('')}</div>`;
+  };
+  const results = (query) => {
+    const found = searchCategories(query, manage);
+    if (!found.length) return { count: 0, html: '' };
+    return { count: found.length, html: `<div class="sheet-list" id="cp-results">${found.map((r) =>
+      categoryRowHtml(r.cat, manage ? 'data-edit' : 'data-pick', r.group.name)).join('')}</div>` };
+  };
+  const node = openSheet(manage ? STRINGS.categories : STRINGS.chooseCategory,
+    `<input class="input search" type="search" id="cp-search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+       enterkeyhint="search" placeholder="${esc(STRINGS.searchCategories)}" aria-label="${esc(STRINGS.searchCategories)}" value="${esc(at.query || '')}">
+     <p class="cp-status" id="cp-status" aria-live="polite"></p>
+     <div id="cp-main"></div>`, { slide, cls: 'cp-sheet' });
+  const input = $('#cp-search', node), main = $('#cp-main', node), status = $('#cp-status', node);
+  const draw = () => {
+    at.query = input.value;
+    status.classList.remove('none');
+    if (!input.value.trim()) { main.innerHTML = tiles(); status.textContent = ''; return; }
+    const r = results(input.value);
+    main.innerHTML = r.html;
+    status.classList.toggle('none', !r.count);               // one polite line: the count, or that nothing matches
+    status.textContent = r.count ? STRINGS.nCategoriesFound(r.count) : STRINGS.noCategoryMatch(input.value.trim());
+  };
+  input.addEventListener('input', draw);
+  input.addEventListener('search', draw);                  // the native clear button
+  node.addEventListener('click', (e) => {
+    const tile = e.target.closest('[data-section]');
+    if (tile) { openCategoryBrowser(mode, { kind: 'section', groupId: tile.dataset.section }); return; }
+    const row = e.target.closest('[data-pick]');
+    if (row) { pick(row.dataset.pick); return; }
+    const editRow = e.target.closest('[data-edit]');
+    if (editRow) edit(editRow.dataset.edit);
+  });
+  draw();
 }
 
 function openRecentSheet() {
@@ -3351,11 +3468,6 @@ VIEWS.profile = function renderProfile() {
      <div class="card" id="archived-cards">${archived.map((c) =>
        `<div class="row card-tile archived" data-id="${esc(c.id)}">${swatch(c)}${cardBadgeHtml(c)}${cardText(c)}
           <button type="button" class="btn small" data-act="card-restore" data-id="${esc(c.id)}" aria-label="${esc(STRINGS.restoreCardLabel(cardDisplayName(c)))}">${esc(STRINGS.restoreCard)}</button></div>`).join('')}</div>`;
-  const cats = itemsByGroup(true).map(({ group, items }) => groupHeadHtml(group) + items.map((c) =>
-    `<button type="button" class="row" data-act="cat-edit" data-id="${esc(c.id)}">
-       <span class="row-emoji" aria-hidden="true">${esc(c.emoji)}</span>
-       <span class="row-text"><span class="row-title">${esc(c.name)}</span></span>
-       ${tagBadge(c)}${c.hidden ? `<span class="badge muted">${esc(STRINGS.hidden)}</span>` : ''}${ICONS.chev}</button>`).join('')).join('');
   el.view.innerHTML =
     `<div class="page">
        <div class="section-head"><span>${esc(STRINGS.myCards)}</span></div>
@@ -3376,8 +3488,10 @@ VIEWS.profile = function renderProfile() {
        </div>
 
        <div class="section-head"><span>${esc(STRINGS.categories)}</span></div>
-       <div class="card" id="category-list">${cats}
-         <button type="button" class="row plain row-action" id="btn-add-category" data-act="cat-add">${esc(STRINGS.addCategory)}</button>
+       <div class="card" id="category-settings">
+         <button type="button" class="row" id="btn-modify-categories" data-act="cat-manage">
+           <span class="row-text"><span class="row-title">${esc(STRINGS.modifyCategories)}</span>
+             <span class="row-sub wrap" id="category-summary">${esc(categorySummaryText())}</span></span>${ICONS.chev}</button>
        </div>
 
        <div class="section-head"><span>${esc(STRINGS.paySection)}</span></div>
@@ -3550,9 +3664,23 @@ function openRestoreSheet() {
 }
 
 /* ----- Categories ----- */
-function openCategorySheet(id) {
+function categorySummaryText() {
+  const hidden = state.categories.filter((c) => c.hidden).length;
+  return STRINGS.categorySummary(state.categories.length, GROUPS.length) + (hidden ? STRINGS.sep + STRINGS.nHidden(hidden) : '');
+}
+
+// from: { back, groupId } when opened from the category manager. `back` redraws the view the sheet
+// came from (a section's list, or the search results); Save, Delete and Cancel return there too.
+function openCategorySheet(id, from) {
   const cat = id ? state.categories.find((c) => c.id === id) : null;
   if (id && !cat) return;
+  const back = from && typeof from.back === 'function' ? from.back : null;
+  const startGroup = cat ? cat.groupId : (from && isGroupId(from.groupId) ? from.groupId : DEFAULT_GROUP);
+  const finish = (toast) => {
+    refreshChips();
+    if (back) { render(); back(); } else { closeSheet(); render(); }
+    if (toast) showToast(toast, { ms: 2000 });
+  };
   const tag = cat ? cat.taxTag || 'none' : 'none';
   const used = cat ? state.expenses.filter((e) => e.categoryId === cat.id).length : 0;
   const tagOptions = ['none'].concat(TAX_TAGS).map((t) =>
@@ -3563,7 +3691,7 @@ function openCategorySheet(id) {
        <input class="input" type="text" id="c-name" maxlength="${CAT_NAME_MAX}" autocomplete="off" autocapitalize="sentences" value="${esc(cat ? cat.name : '')}"></label>
      <label class="field"><span class="label">${esc(STRINGS.catGroup)}</span>
        <select class="input" id="c-group">${GROUPS.map((g) =>
-         `<option value="${g.id}"${g.id === (cat ? cat.groupId : DEFAULT_GROUP) ? ' selected' : ''}>${esc(g.emoji + ' ' + g.name)}</option>`).join('')}</select></label>
+         `<option value="${g.id}"${g.id === startGroup ? ' selected' : ''}>${esc(g.emoji + ' ' + g.name)}</option>`).join('')}</select></label>
      <label class="field"><span class="label">${esc(STRINGS.catEmoji)}</span>
        <input class="input" type="text" id="c-emoji" maxlength="16" autocomplete="off" value="${esc(cat ? cat.emoji : DEFAULT_EMOJI)}"></label>
      <fieldset class="field"><legend>${esc(STRINGS.catTaxTag)}</legend><div class="options" id="c-tags">${tagOptions}</div></fieldset>
@@ -3571,7 +3699,7 @@ function openCategorySheet(id) {
      <p class="error" id="c-error" role="alert"></p>
      <div id="c-actions">
        <div class="btn-row">
-         <button type="button" class="btn" data-sheet-close>${esc(STRINGS.cancel)}</button>
+         <button type="button" class="btn" id="c-cancel"${back ? '' : ' data-sheet-close'}>${esc(STRINGS.cancel)}</button>
          <button type="button" class="btn primary" id="c-save">${esc(STRINGS.save)}</button>
        </div>
        ${custom && used === 0 ? `<div class="btn-row"><button type="button" class="btn ghost-danger" id="c-delete">${esc(STRINGS.deleteCategory)}</button></div>` : ''}
@@ -3583,7 +3711,8 @@ function openCategorySheet(id) {
          <button type="button" class="btn" id="c-confirm-cancel">${esc(STRINGS.cancel)}</button>
          <button type="button" class="btn danger" id="c-confirm-delete">${esc(STRINGS.del)}</button>
        </div>
-     </div>`);
+     </div>`, back ? { back, slide: 'fwd' } : undefined);
+  if (back) $('#c-cancel', node).addEventListener('click', () => back());
   const showConfirm = (on) => { $('#c-actions', node).hidden = on; $('#c-confirm', node).hidden = !on; };
   const del = $('#c-delete', node);
   if (del) {
@@ -3593,10 +3722,7 @@ function openCategorySheet(id) {
       if (state.expenses.some((e) => e.categoryId === cat.id)) return;
       state.categories = state.categories.filter((c) => c.id !== cat.id);
       saveState();
-      refreshChips();
-      closeSheet();
-      render();
-      showToast(STRINGS.catDeleted, { ms: 2000 });
+      finish(STRINGS.catDeleted);
     });
   }
   $('#c-save', node).addEventListener('click', () => {
@@ -3617,10 +3743,7 @@ function openCategorySheet(id) {
       createCategory(name, emoji, taxTag, groupId);
     }
     saveState();
-    refreshChips();
-    closeSheet();
-    render();
-    showToast(STRINGS.catSaved, { ms: 2000 });
+    finish(STRINGS.catSaved);
   });
 }
 
@@ -4232,7 +4355,7 @@ const ACTIONS = {
   tab: (t) => switchTab(t.dataset.tab),
   chip: (t) => selectCategory(t.dataset.cat, true),
   usual: (t) => selectCategory(t.dataset.cat, true),
-  'chip-more': openAllCategoriesSheet,
+  'chip-more': () => openCategoryBrowser('pick'),
   save: saveDraft,
   details: openDetailsSheet,
   recent: openRecentSheet,
@@ -4277,8 +4400,7 @@ const ACTIONS = {
   'copy-backup': copyBackup,
   download: downloadBackup,
   restore: openRestoreSheet,
-  'cat-add': () => openCategorySheet(null),
-  'cat-edit': (t) => openCategorySheet(t.dataset.id),
+  'cat-manage': () => openCategoryBrowser('manage'),
   'delete-all': openDeleteAllSheet,
   'setup-again': openWelcome,
   'update-reload': applyUpdate,
@@ -4334,7 +4456,7 @@ window.addEventListener('storage', (e) => {
   if (e.key !== null && e.key !== STORAGE_KEY) return;
   if (store.mode !== 'ok') return;
   loadState();
-  refreshChips();
+  if (ui.tab !== 'add' || draftIsEmpty()) refreshChips();
   closeSheet();
   closeReport();
   if (ui.draft.cardId && !cardById(ui.draft.cardId)) ui.draft.cardId = null;
@@ -4349,7 +4471,10 @@ document.addEventListener('visibilitychange', () => {
   checkForUpdate();
   if (sheet.node || report.node) return;
   if (ui.tab === 'history' && document.activeElement && document.activeElement.id === 'h-search') renderHistoryBody();
-  else render();
+  else {
+    if (ui.tab === 'add' && draftIsEmpty()) refreshChips();   // never while an entry is under way
+    render();
+  }
 });
 
 /* =====================================================================

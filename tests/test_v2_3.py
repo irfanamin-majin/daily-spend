@@ -135,32 +135,31 @@ def test_03_more_and_usual_select_without_saving(app):
     app.seed(make_state(rows))
     chips = lambda: add_state(app)["chips"]
     start = chips()
-    assert start == DEFAULT_CHIPS[1:2] + DEFAULT_CHIPS[0:1] + DEFAULT_CHIPS[2:] + ["More"]      # most used first, frozen for the session
+    assert start == DEFAULT_CHIPS[1:2] + DEFAULT_CHIPS[0:1] + DEFAULT_CHIPS[2:] + ["More"]      # most recent first
     # More works with no amount yet; choosing closes the sheet and selects, nothing is saved
-    app.ui.locator(".chip-more").click()
-    app.ui.locator('#all-categories [data-pick="insurance.life-insurance"]').click()
+    app.more_pick(cat_id="insurance.life-insurance")
     assert app.sheet_hidden() and len(app.expenses()) == 2 and app.toast().count() == 0
     st = add_state(app)
     # ...and it takes the seventh chip slot for this entry
     assert st["chips"] == start[:6] + ["Life Insurance", "More"] and st["selected"] == ["Life Insurance"]
     assert st["hint"] == "Enter an amount" and st["chipsOutline"][0] == CLEAR
     app.ui.locator(".chip-more").click()
-    assert app.ui.locator('#all-categories [data-pick="insurance.life-insurance"]').get_attribute("aria-pressed") == "true"
-    app.ui.locator('#all-categories [data-pick="recreation.club-memberships"]').click()        # only one category at a time
+    app.ui.locator('#cp-tiles [data-section="insurance"]').click()
+    assert app.ui.locator('#cp-chips [data-pick="insurance.life-insurance"]').get_attribute("aria-pressed") == "true"
+    app.ui.locator("[data-sheet-back]").click()
+    app.more_pick(cat_id="recreation.club-memberships")                                        # only one category at a time
     assert chips() == start[:6] + ["Club Memberships", "More"] and add_state(app)["selected"] == ["Club Memberships"]
     app.type_amount("45")
     assert add_state(app)["disabled"] == "false" and len(app.expenses()) == 2
     app.save()
     assert app.toast().inner_text() == "Saved $45.00 · Club Memberships"
     assert [e for e in app.expenses() if e["amountCents"] == 4500][0]["categoryId"] == "recreation.club-memberships"
-    assert chips() == start and add_state(app)["selected"] == []               # saved: the frozen chip order is back
+    assert chips() == start and add_state(app)["selected"] == []               # saved: the chip order is back
     # a More pick that is already a chip just selects that chip
-    app.ui.locator(".chip-more").click()
-    app.ui.locator('#all-categories [data-pick="misc.shopping"]').click()
+    app.more_pick(cat_id="misc.shopping")
     assert chips() == start and add_state(app)["selected"] == ["Shopping"]
     # clearing a borrowed slot brings the seventh chip back
-    app.ui.locator(".chip-more").click()
-    app.ui.locator('#all-categories [data-pick="misc.pets"]').click()
+    app.more_pick(cat_id="misc.pets")
     assert chips()[6] == "Pets"
     app.chip("Pets").click()
     assert chips() == start and add_state(app)["selected"] == []
@@ -566,11 +565,11 @@ def test_09b_range_with_no_spending(app):
 # ---------------------------------------------------------------- 10
 def test_10_version(make_app):
     sw = source("sw.js")
-    assert "const VERSION = '0.2.4';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
-    assert "version: '0.2.4'," in source("app.js") and not re.search(r"0\.2\.[0123]\b", sw + source("app.js"))
+    assert "const VERSION = '0.2.5';" in sw and "const CACHE = 'ds-' + VERSION;" in sw
+    assert "version: '0.2.5'," in source("app.js") and not re.search(r"0\.2\.[01234]\b", sw + source("app.js"))
     app = make_app(service_workers="allow", cards=None, tax=None)
-    wait_cached(app.page, cache="ds-0.2.4")
-    assert app.page.evaluate("caches.keys()") == ["ds-0.2.4"]
+    wait_cached(app.page, cache="ds-0.2.5")
+    assert app.page.evaluate("caches.keys()") == ["ds-0.2.5"]
     app.tab("profile")
-    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.4"
+    assert app.ui.locator("#app-version").inner_text() == "Version 0.2.5"
     assert app.console_errors == []
